@@ -80,6 +80,11 @@ const faqs = [
       "Yes. There is no account, subscription or fee. It is a small, independent utility built to make UPI payment links easier to create and share.",
   },
   {
+    question: "Why is there a CAPTCHA?",
+    answer:
+      "Cloudflare Turnstile checks that a person is creating the payment link. The check runs before the page is generated, and no CAPTCHA token or verification result is stored in a database.",
+  },
+  {
     question: "Does UPI QR Generator verify my UPI ID?",
     answer:
       "No. We check the basic syntax only. A correctly formatted UPI ID can still be inactive, mistyped or belong to someone else. Always confirm the recipient inside your payment app before paying.",

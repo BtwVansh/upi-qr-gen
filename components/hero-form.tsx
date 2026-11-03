@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useCallback, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -12,25 +12,42 @@ import {
   LockKeyhole,
   ShieldCheck,
 } from "lucide-react";
-import { buildPaymentHref, validateAmount, validateUpiId } from "@/lib/upi";
+import {
+  TurnstileWidget,
+  type TurnstileWidgetHandle,
+} from "@/components/turnstile";
+import { TURNSTILE_SITE_KEY } from "@/lib/turnstile";
+import { validateAmount, validateUpiId } from "@/lib/upi";
 import { cn } from "@/lib/cn";
 
 const EXAMPLES = ["name@okaxis", "username@ybl", "number@paytm"];
+
+type TurnstileApiResponse =
+  | { success: true; href: string }
+  | { success: false; error: string };
 
 export function HeroForm() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const amountRef = useRef<HTMLInputElement>(null);
   const consentRef = useRef<HTMLInputElement>(null);
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null);
   const [upiId, setUpiId] = useState("");
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [amountError, setAmountError] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
   const [consentError, setConsentError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [captchaError, setCaptchaError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const handleTurnstileToken = useCallback((token: string | null) => {
+    setTurnstileToken(token);
+    if (token) setCaptchaError(null);
+  }, []);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const result = validateUpiId(upiId);
 
@@ -61,8 +78,61 @@ export function HeroForm() {
     }
 
     setConsentError(null);
+
+    if (!TURNSTILE_SITE_KEY) {
+      setCaptchaError(
+        "CAPTCHA is not configured. Add NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY to the environment before generating payment links.",
+      );
+      return;
+    }
+
+    if (!turnstileToken) {
+      setCaptchaError(
+        "Complete the CAPTCHA verification before generating a payment link.",
+      );
+      return;
+    }
+
+    setCaptchaError(null);
     setPending(true);
-    router.push(buildPaymentHref(result.upiId, amountResult.amount));
+
+    try {
+      const response = await fetch("/api/turnstile/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token: turnstileToken,
+          upiId: result.upiId,
+          amount: amountResult.amount ?? "",
+        }),
+      });
+
+      const data = (await response
+        .json()
+        .catch(() => null)) as TurnstileApiResponse | null;
+
+      if (!response.ok || !data || !data.success) {
+        setCaptchaError(
+          data && !data.success
+            ? data.error
+            : "Verification failed. Please complete the CAPTCHA and try again.",
+        );
+        setPending(false);
+        // A Turnstile token is single-use; start a fresh challenge on retry.
+        turnstileRef.current?.reset();
+        return;
+      }
+
+      router.push(data.href);
+    } catch {
+      setCaptchaError(
+        "Could not reach the verification service. Check your connection and try again.",
+      );
+      setPending(false);
+      turnstileRef.current?.reset();
+    }
   }
 
   function applyExample(example: string) {
@@ -279,6 +349,27 @@ export function HeroForm() {
             )}
           </div>
 
+          <div className="mt-5">
+            <TurnstileWidget
+              ref={turnstileRef}
+              siteKey={TURNSTILE_SITE_KEY}
+              onToken={handleTurnstileToken}
+            />
+            {captchaError && (
+              <p
+                id="captcha-error"
+                role="alert"
+                className="mt-2 flex items-start gap-1.5 text-xs font-medium leading-5 text-danger"
+              >
+                <AlertCircle
+                  className="mt-0.5 size-3.5 shrink-0"
+                  aria-hidden="true"
+                />
+                {captchaError}
+              </p>
+            )}
+          </div>
+
           <button
             type="submit"
             disabled={pending}
@@ -287,7 +378,7 @@ export function HeroForm() {
             {pending ? (
               <>
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                Generating…
+                Verifying…
               </>
             ) : (
               <>

@@ -36,6 +36,9 @@ Source code: <https://github.com/BtwVansh/upi-qr-gen>
 - **Stateless payment links** — the UPI ID and optional amount are encoded in
   the URL, and the QR code is rebuilt client-side. No database or backend
   storage.
+- **Cloudflare Turnstile CAPTCHA** — managed-mode verification is required
+  before a payment link is created. Tokens are verified server-side with
+  Cloudflare's Siteverify API and are rejected when invalid, expired or reused.
 - **Editable amount on the payment page** — changing the amount regenerates the
   QR code and the shareable URL together.
 - **Native app buttons** — Google Pay, PhonePe, and Paytm, with
@@ -67,11 +70,12 @@ Source code: <https://github.com/BtwVansh/upi-qr-gen>
 | Styling | Tailwind CSS 3.4.19 |
 | Icons | lucide-react 1.66.0 |
 | QR generation | qrcode 1.5.4 (client-side PNG data URLs) |
+| CAPTCHA | Cloudflare Turnstile, managed mode, with server-side Siteverify |
 | Hosting | Netlify with the native Next.js integration |
 | Tests | `tsx` + Node assertions, plus headless Chrome verification |
 
-No runtime backend, database, authentication, analytics, or advertising scripts
-are used.
+No database, authentication, analytics, or advertising scripts are used.
+CAPTCHA verification runs in a stateless server route and stores nothing.
 
 ---
 
@@ -81,8 +85,12 @@ Requirements: **Node.js 20.9 or newer** (Node 22 is used on Netlify) and npm.
 
 ```bash
 npm install
+cp .env.example .env.local   # Windows: copy .env.example .env.local
 npm run dev
 ```
+
+Add your Cloudflare Turnstile keys to `.env.local` before generating a link.
+See [Cloudflare Turnstile setup](#cloudflare-turnstile-setup).
 
 Open <http://localhost:3000>.
 
@@ -107,12 +115,84 @@ npm start
 
 ---
 
+## Cloudflare Turnstile setup
+
+The generator uses Cloudflare Turnstile in **managed mode**. The widget is
+rendered in the form, and the token is verified server-side before the API route
+returns a payment URL. No token or verification result is stored.
+
+### Environment variables
+
+| Variable | Visibility | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Public | Turnstile widget site key, embedded in the browser bundle |
+| `TURNSTILE_SECRET_KEY` | **Server-only** | Used by `/api/turnstile/verify` to call Siteverify |
+
+Never prefix the secret key with `NEXT_PUBLIC_`. Only the server route reads it.
+
+### Create the widget
+
+1. Open the Cloudflare dashboard → **Turnstile** → **Add widget**.
+2. Choose **Managed** mode.
+3. Add the hostnames that serve the app. For production, at minimum:
+   - `upigenerator.netlify.app`
+   - `localhost` if you want to test locally
+   - any Netlify deploy-preview hostnames you use
+4. Copy the **Site Key** and **Secret Key**.
+
+### Configure Netlify
+
+In **Site configuration → Environment variables**, add:
+
+```text
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=<your site key>
+TURNSTILE_SECRET_KEY=<your secret key>
+```
+
+Apply both to the deploy contexts you use (production, deploy previews, branch
+deploys). `NEXT_PUBLIC_*` values are inlined at build time, so trigger a new
+deploy after adding or changing the site key. The secret key is read at runtime
+by the server route and is never sent to the browser.
+
+### Local development
+
+Create `.env.local` from `.env.example` and add both keys. Restart `npm run dev`
+after changing environment variables.
+
+Cloudflare publishes official always-pass test keys for local development:
+
+```text
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+```
+
+Use real keys in production. The test keys are provided by Cloudflare and are
+not a frontend-only bypass.
+
+### Verification behaviour
+
+- The server validates the UPI ID and amount first, then calls
+  `https://challenges.cloudflare.com/turnstile/v0/siteverify`.
+- The payment URL is only returned after `success: true`.
+- Turnstile tokens are single-use. A reused token produces
+  `timeout-or-duplicate`, which is shown as an expired/used error.
+- The widget resets after a failed verification so the user can retry.
+- If the secret key is missing, the API returns a configuration error and no
+  payment link is created.
+
+If you add a Content Security Policy later, allow
+`https://challenges.cloudflare.com` for `script-src`, `frame-src`, and
+`connect-src`.
+
+---
+
 ## Routes
 
 | Route | Rendering | Description |
 | --- | --- | --- |
 | `/` | Static | Landing page and UPI QR generator |
 | `/pay/[upi]` | Dynamic (server-rendered) | Payment page reconstructed from the UPI ID and optional `amount` query |
+| `/api/turnstile/verify` | Dynamic (server-only) | Verifies a Turnstile token with Siteverify and returns the payment URL only after success |
 | `/privacy` | Static | Privacy notice |
 | `/disclaimer` | Static | Disclaimer and limitations |
 | `/robots.txt`, `/sitemap.xml`, `/manifest.webmanifest` | Generated | Crawler and app metadata |
@@ -126,7 +206,19 @@ refreshes are handled by Netlify's Next.js runtime.
 
 ## How the stateless link works
 
-### 1. Validation
+### 1. CAPTCHA verification
+
+The homepage form requires a Turnstile token. The browser sends the token, UPI
+ID and optional amount to `/api/turnstile/verify`, which validates the payment
+details and calls Cloudflare's Siteverify endpoint. Only after a successful
+verification does the route return the relative payment URL. The secret key
+stays on the server, and the token is single-use.
+
+Direct visits to an existing `/pay/...` URL still work without a CAPTCHA. That
+is required for the stateless architecture: a shared payment link must remain
+reproducible without a database or an issuance record.
+
+### 2. Validation
 
 `lib/upi.ts` normalises invisible characters and surrounding whitespace, then
 performs syntax checks only:
@@ -140,7 +232,7 @@ performs syntax checks only:
 A syntactically valid ID is **not** a verified ID. UPI QR Generator cannot know whether
 the handle exists, is active, or belongs to the intended recipient.
 
-### 2. Optional amount
+### 3. Optional amount
 
 `validateAmount()` accepts a positive number with at most two decimal places,
 ignores a leading `₹` and surrounding whitespace, and canonicalises the value to
@@ -155,7 +247,7 @@ The amount is part of the URL query, so `/pay/ABCD%40OKAXIS?amount=500.00`
 reconstructs the same QR code. Invalid or repeated amounts render the custom 404
 page rather than silently choosing a value.
 
-### 3. Encoding
+### 4. Encoding
 
 The UPI ID is encoded exactly once as a URL path segment and exactly once
 inside the UPI URI. The amount is included as `am` only when one is set:
@@ -167,14 +259,14 @@ buildUpiUri("name@okaxis")               // "upi://pay?pa=name%40okaxis&cu=INR"
 buildUpiUri("name@okaxis", "500.00")     // "upi://pay?pa=name%40okaxis&am=500.00&cu=INR"
 ```
 
-### 4. Decoding
+### 5. Decoding
 
 Next.js 15 supplies dynamic route params percent-encoded in this app's runtime,
 so `readUpiRouteParam()` calls `decodeURIComponent` **once**, then validates.
 Double-encoded input (`name%2540okaxis`) decodes to a literal `%40`, which fails
 validation instead of being decoded a second time.
 
-### 5. QR generation
+### 6. QR generation
 
 `components/qr-code.tsx` calls `qrcode` in the browser and renders a PNG data
 URL. The URI is never sent to a server, and no QR image is stored anywhere.
@@ -225,6 +317,7 @@ realupi/
 ├── app/
 │   ├── layout.tsx              # Metadata, theme bootstrap, header/footer shell
 │   ├── page.tsx                # Landing page
+│   ├── api/turnstile/verify/route.ts  # Server-side Siteverify check
 │   ├── pay/[upi]/page.tsx      # Dynamic payment route, amount parsing, metadata
 │   ├── privacy/page.tsx
 │   ├── disclaimer/page.tsx
@@ -237,7 +330,8 @@ realupi/
 │   ├── opengraph-image.tsx
 │   └── twitter-image.tsx
 ├── components/
-│   ├── hero-form.tsx           # UPI and amount inputs, validation, disclaimer
+│   ├── hero-form.tsx           # UPI and amount inputs, CAPTCHA, validation
+│   ├── turnstile.tsx           # Managed-mode Turnstile widget
 │   ├── payment-view.tsx        # Payment page UI, amount editor, actions
 │   ├── qr-code.tsx             # Client-side QR renderer
 │   ├── site-chrome.tsx         # Header and footer
@@ -246,6 +340,7 @@ realupi/
 │   └── logo.tsx
 ├── lib/
 │   ├── upi.ts                  # Validation, amount handling, URI/URL construction
+│   ├── turnstile.ts            # Public widget config and browser types
 │   ├── device.ts               # Testable platform detection
 │   ├── payment-apps.ts         # App definitions, Android/iOS launch URLs
 │   ├── qr.ts                   # PNG data URL and download helper
@@ -284,7 +379,11 @@ a `basePath`.
    | Publish directory | `.next` |
    | Node version | `22` (also pinned in `netlify.toml`) |
 
-4. Trigger a deploy. No environment variables are required.
+4. Add the two Turnstile environment variables described in
+   [Cloudflare Turnstile setup](#cloudflare-turnstile-setup). They are required;
+   the generator is blocked without them.
+5. Trigger a deploy. `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is inlined at build time,
+   so redeploy whenever it changes.
 
 ### Optional environment variable
 
@@ -304,6 +403,11 @@ different origin. The default is `https://upigenerator.netlify.app`.
 - Refreshing that payment URL returns the same page (not a 404).
 - An invalid payment URL, an invalid amount, and an unknown path all return the
   custom 404 page.
+- Submitting the generator without completing Turnstile shows a verification
+  error and creates no payment page.
+- With the production keys configured, the Turnstile widget completes on
+  desktop, Android and iOS, and the verified redirect reaches the payment page.
+- A reused or expired token is rejected and the widget resets for a retry.
 - The QR decodes to `upi://pay?pa=name%40okaxis&cu=INR` without an amount or
   `upi://pay?pa=name%40okaxis&am=500.00&cu=INR` with an amount.
 
@@ -314,7 +418,7 @@ different origin. The default is `https://upigenerator.netlify.app`.
 
 ## Testing performed
 
-Automated after the amount and branding update:
+Automated after the CAPTCHA integration:
 
 - `npm run typecheck` — clean
 - `npm run lint` — clean
@@ -322,9 +426,21 @@ Automated after the amount and branding update:
   handling, encoding, route decoding, URL construction, app launch URLs, and
   platform detection
 
+Turnstile integration check using Cloudflare's official always-pass test keys:
+
+- The managed-mode widget rendered in the form and reported success.
+- Submitting the form reached `/api/turnstile/verify`, which returned
+  `/pay/captcha.test%40okaxis?amount=123.45`, and the browser navigated to that
+  payment page with the correct amount.
+- A missing token returned HTTP 400 and no payment link.
+- An invalid amount returned HTTP 400 and no payment link.
+- The always-pass test secret cannot exercise rejection paths such as
+  `timeout-or-duplicate`; those are enforced by Cloudflare Siteverify and are
+  mapped to a retryable error in the route.
+
 The production build and headless Chrome checks below were completed before the
-amount and branding update. Re-run `npm run build` and repeat the browser checks
-before deploying this version.
+amount, branding and CAPTCHA updates. Re-run `npm run build` and repeat the
+browser checks with production Turnstile keys before deploying this version.
 
 Baseline browser checks:
 
@@ -377,7 +493,10 @@ development-only tooling and are not shipped to production.
 - The only `localStorage` value is the theme preference (`upiqr-theme`).
   UPI IDs and payment data are never stored there.
 - The QR code is generated locally; the UPI URI is not sent to a server.
-- No analytics, advertising pixels, or third-party tracking scripts are loaded.
+- The Turnstile token, UPI ID and optional amount are sent to this site's
+  verification route. The token is checked with Cloudflare and is never stored.
+- CAPTCHA verification is the only third-party script. No analytics, advertising
+  pixels, or cross-site tracking scripts are loaded.
 - Security headers are applied by `netlify.toml`.
 
 ---
@@ -400,6 +519,9 @@ development-only tooling and are not shipped to production.
 6. **UPI IDs and amounts in URLs are visible.** This is a deliberate trade-off
    for statelessness; do not use the service for IDs or amounts you consider
    secret.
+7. **CAPTCHA requires Cloudflare.** If Turnstile is misconfigured or unavailable,
+   the generator cannot create new payment links. Existing `/pay/...` links
+   remain usable because they are reconstructed directly from the URL.
 
 ---
 

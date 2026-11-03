@@ -5,7 +5,7 @@ import { GITHUB_URL, SITE_NAME } from "@/lib/site";
 export const metadata = {
   title: "Privacy",
   description:
-    "How UPI QR Generator handles your UPI ID, payment links and browser data. No database, no accounts and no payment credentials.",
+    "How UPI QR Generator handles your UPI ID, payment links, CAPTCHA verification and browser data. No database, no accounts and no payment credentials.",
   alternates: {
     canonical: "/privacy",
   },
@@ -39,7 +39,7 @@ export default function PrivacyPage() {
           payment records, require an account, or process money.
         </p>
         <p className="mt-3 text-xs text-ink-subtle">
-          Last updated: 2 November 2026
+          Last updated: 4 November 2026
         </p>
 
         <div className="legal-prose mt-10">
@@ -105,6 +105,28 @@ export default function PrivacyPage() {
             Your browser may also store your light/dark theme preference in
             local storage. That preference contains no payment information and
             is not required to view or regenerate a QR code.
+          </p>
+
+          <h2>CAPTCHA verification</h2>
+          <p>
+            Before a payment link is created, Cloudflare Turnstile checks that
+            the request comes from a person. Your browser loads the Turnstile
+            widget from Cloudflare and sends a short-lived token to this
+            site&apos;s server, which verifies it with Cloudflare&apos;s
+            Siteverify API. Cloudflare may process technical data such as your
+            IP address, browser information and challenge signals as part of
+            this check. Turnstile tokens are single-use and are not stored by
+            this application. See Cloudflare&apos;s{" "}
+            <a
+              href="https://www.cloudflare.com/privacypolicy/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1"
+            >
+              privacy policy
+              <ArrowUpRight className="size-3.5" aria-hidden="true" />
+            </a>
+            .
           </p>
 
           <h2>Payment applications and third parties</h2>
