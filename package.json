@@ -1,12 +1,12 @@
 {
-  "name": "upi-link",
-  "version": "1.0.0",
+  "name": "upi-qr-generator",
+  "version": "1.1.0",
   "private": true,
-  "description": "Generate UPI payment QR codes and permanent, stateless payment links.",
+  "description": "Generate UPI payment QR codes, optional amounts, and permanent stateless payment links.",
   "homepage": "https://upigenerator.netlify.app/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/btwvansh/upi-gen.git"
+    "url": "https://github.com/BtwVansh/upi-qr-gen.git"
   },
   "scripts": {
     "dev": "next dev",

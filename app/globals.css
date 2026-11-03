@@ -4,17 +4,17 @@
 
 @layer base {
   :root {
-    --canvas: #f7f6f1;
+    --canvas: #f8fafc;
     --surface: #ffffff;
-    --surface-raised: #fffdf8;
-    --ink: #0b0f0e;
-    --ink-muted: #555c58;
-    --ink-subtle: #747c77;
-    --line: #e4e2d9;
-    --line-strong: #cfccc0;
-    --accent: #0b7a5c;
-    --accent-strong: #065e45;
-    --accent-soft: #e6f3ed;
+    --surface-raised: #f8fbff;
+    --ink: #0f172a;
+    --ink-muted: #475569;
+    --ink-subtle: #64748b;
+    --line: #e2e8f0;
+    --line-strong: #cbd5e1;
+    --accent: #2563eb;
+    --accent-strong: #1d4ed8;
+    --accent-soft: #eff6ff;
     --accent-ink: #ffffff;
     --danger: #b42318;
     --danger-soft: #fef3f2;
@@ -22,17 +22,17 @@
     --warning-soft: #fff8e6;
 
     /* RGB channels let Tailwind combine these colours with opacity. */
-    --canvas-rgb: 247 246 241;
+    --canvas-rgb: 248 250 252;
     --surface-rgb: 255 255 255;
-    --surface-raised-rgb: 255 253 248;
-    --ink-rgb: 11 15 14;
-    --ink-muted-rgb: 85 92 88;
-    --ink-subtle-rgb: 116 124 119;
-    --line-rgb: 228 226 217;
-    --line-strong-rgb: 207 204 192;
-    --accent-rgb: 11 122 92;
-    --accent-strong-rgb: 6 94 69;
-    --accent-soft-rgb: 230 243 237;
+    --surface-raised-rgb: 248 251 255;
+    --ink-rgb: 15 23 42;
+    --ink-muted-rgb: 71 85 105;
+    --ink-subtle-rgb: 100 116 139;
+    --line-rgb: 226 232 240;
+    --line-strong-rgb: 203 213 225;
+    --accent-rgb: 37 99 235;
+    --accent-strong-rgb: 29 78 216;
+    --accent-soft-rgb: 239 246 255;
     --accent-ink-rgb: 255 255 255;
     --danger-rgb: 180 35 24;
     --danger-soft-rgb: 254 243 242;
@@ -42,35 +42,35 @@
   }
 
   .dark {
-    --canvas: #070a09;
-    --surface: #0e1211;
-    --surface-raised: #131817;
-    --ink: #f3f4ef;
-    --ink-muted: #a9b0ab;
-    --ink-subtle: #818983;
-    --line: #232a27;
-    --line-strong: #35403b;
-    --accent: #4cc79b;
-    --accent-strong: #76dfb5;
-    --accent-soft: #10281f;
-    --accent-ink: #04130c;
+    --canvas: #0b1220;
+    --surface: #111a2c;
+    --surface-raised: #162238;
+    --ink: #e8eef8;
+    --ink-muted: #a3b2c8;
+    --ink-subtle: #7f90a8;
+    --line: #1e2b45;
+    --line-strong: #2d3d5c;
+    --accent: #60a5fa;
+    --accent-strong: #93c5fd;
+    --accent-soft: #152747;
+    --accent-ink: #081326;
     --danger: #f97066;
     --danger-soft: #2a100e;
     --warning: #e5b567;
     --warning-soft: #2a2110;
 
-    --canvas-rgb: 7 10 9;
-    --surface-rgb: 14 18 17;
-    --surface-raised-rgb: 19 24 23;
-    --ink-rgb: 243 244 239;
-    --ink-muted-rgb: 169 176 171;
-    --ink-subtle-rgb: 129 137 131;
-    --line-rgb: 35 42 39;
-    --line-strong-rgb: 53 64 59;
-    --accent-rgb: 76 199 155;
-    --accent-strong-rgb: 118 223 181;
-    --accent-soft-rgb: 16 40 31;
-    --accent-ink-rgb: 4 19 12;
+    --canvas-rgb: 11 18 32;
+    --surface-rgb: 17 26 44;
+    --surface-raised-rgb: 22 34 56;
+    --ink-rgb: 232 238 248;
+    --ink-muted-rgb: 163 178 200;
+    --ink-subtle-rgb: 127 144 168;
+    --line-rgb: 30 43 69;
+    --line-strong-rgb: 45 61 92;
+    --accent-rgb: 96 165 250;
+    --accent-strong-rgb: 147 197 253;
+    --accent-soft-rgb: 21 39 71;
+    --accent-ink-rgb: 8 19 38;
     --danger-rgb: 249 112 102;
     --danger-soft-rgb: 42 16 14;
     --warning-rgb: 229 181 103;
@@ -136,7 +136,7 @@
   }
 
   .btn-primary {
-    @apply btn bg-accent text-accent-ink shadow-sm hover:bg-accent-strong hover:shadow-md active:scale-[0.985];
+    @apply btn bg-accent text-accent-ink shadow-sm hover:bg-accent-strong active:scale-[0.985];
   }
 
   .btn-secondary {
@@ -224,8 +224,8 @@
 
   .hero-wash {
     background:
-      radial-gradient(60% 55% at 78% 28%, var(--accent-soft) 0%, transparent 70%),
-      radial-gradient(40% 40% at 12% 8%, rgba(11, 122, 92, 0.06) 0%, transparent 70%);
+      radial-gradient(58% 52% at 80% 26%, var(--accent-soft) 0%, transparent 72%),
+      radial-gradient(40% 40% at 12% 8%, rgba(37, 99, 235, 0.05) 0%, transparent 70%);
   }
 
   .mask-fade-b {
@@ -249,7 +249,7 @@
     background:
       linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent)
         0 0 / 200% 100%,
-      repeating-conic-gradient(#e9e9e4 0% 25%, #f8f8f4 0% 50%) 0 0 / 18px 18px;
+      repeating-conic-gradient(#e8edf5 0% 25%, #f8fafc 0% 50%) 0 0 / 18px 18px;
     animation: shimmer 1.6s infinite;
   }
 }

@@ -28,7 +28,7 @@ export default function NotFound() {
         </h1>
         <p className="mt-4 max-w-md text-base leading-7 text-ink-muted">
           The page may have moved, the address may be mistyped, or the payment
-          link may not contain a valid UPI ID.
+          link may not contain a valid UPI ID or amount.
         </p>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">

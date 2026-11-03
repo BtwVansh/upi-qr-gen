@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
-import { SITE_TAGLINE } from "@/lib/site";
+import { SITE_NAME, SITE_TAGLINE } from "@/lib/site";
 
-export const alt = "UPI Link — Your UPI. One Link.";
+export const alt = `${SITE_NAME} — Your UPI. One Link.`;
 export const size = {
   width: 1200,
   height: 630,
@@ -18,8 +18,8 @@ export default function OpenGraphImage() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          backgroundColor: "#082f24",
-          color: "#f3f4ef",
+          backgroundColor: "#0f172a",
+          color: "#f8fafc",
           padding: "64px 72px",
           position: "relative",
         }}
@@ -37,11 +37,11 @@ export default function OpenGraphImage() {
                 width: 56,
                 height: 56,
                 borderRadius: 16,
-                backgroundColor: "#4cc79b",
+                backgroundColor: "#2563eb",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#04130c",
+                color: "#ffffff",
                 fontSize: 27,
                 fontWeight: 700,
                 marginRight: 16,
@@ -57,7 +57,7 @@ export default function OpenGraphImage() {
                 letterSpacing: "-0.02em",
               }}
             >
-              UPI Link
+              UPI QR Generator
             </div>
           </div>
           <div
@@ -67,7 +67,7 @@ export default function OpenGraphImage() {
               borderRadius: 999,
               padding: "10px 18px",
               fontSize: 16,
-              color: "#b9d8cc",
+              color: "#cbd5e1",
               letterSpacing: "0.08em",
             }}
           >
@@ -91,11 +91,9 @@ export default function OpenGraphImage() {
             style={{
               display: "flex",
               fontSize: 82,
-              fontStyle: "italic",
               letterSpacing: "-0.04em",
               lineHeight: 1.1,
-              color: "#4cc79b",
-              fontFamily: "Georgia, serif",
+              color: "#60a5fa",
             }}
           >
             One Link.
@@ -107,7 +105,7 @@ export default function OpenGraphImage() {
               maxWidth: 760,
               fontSize: 24,
               lineHeight: 1.45,
-              color: "#b9d8cc",
+              color: "#cbd5e1",
             }}
           >
             A scannable UPI QR code and a shareable payment page. No account,
@@ -124,10 +122,10 @@ export default function OpenGraphImage() {
             paddingTop: 28,
           }}
         >
-          <div style={{ display: "flex", fontSize: 20, color: "#8fc7b2" }}>
+          <div style={{ display: "flex", fontSize: 20, color: "#94a3b8" }}>
             {SITE_TAGLINE}
           </div>
-          <div style={{ display: "flex", fontSize: 20, color: "#f3f4ef" }}>
+          <div style={{ display: "flex", fontSize: 20, color: "#f8fafc" }}>
             upigenerator.netlify.app
           </div>
         </div>

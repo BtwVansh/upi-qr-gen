@@ -10,12 +10,12 @@ export function Logo({ href = "/", className }: LogoProps) {
   const content = (
     <>
       <LogoMark />
-      <span className="flex items-baseline gap-1.5">
-        <span className="text-[1.06rem] font-semibold tracking-[-0.02em] text-ink">
-          UPI
+      <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+        <span className="text-[1rem] font-semibold tracking-[-0.02em] text-ink">
+          UPI QR
         </span>
-        <span className="text-[1.06rem] font-medium tracking-[-0.02em] text-ink-muted">
-          Link
+        <span className="text-[1rem] font-medium tracking-[-0.02em] text-ink-muted">
+          Generator
         </span>
       </span>
     </>

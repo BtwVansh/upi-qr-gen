@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { ToastProvider } from "@/components/toast";
@@ -10,6 +11,12 @@ import {
 } from "@/lib/site";
 import { themeInitScript } from "@/lib/theme";
 
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
@@ -18,9 +25,9 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
-  authors: [{ name: "UPI Link", url: SITE_URL }],
-  creator: "UPI Link",
-  publisher: "UPI Link",
+  authors: [{ name: "UPI QR Generator", url: SITE_URL }],
+  creator: "UPI QR Generator",
+  publisher: "UPI QR Generator",
   category: "finance",
   keywords: [
     "UPI link",
@@ -72,8 +79,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   colorScheme: "light dark",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f6f1" },
-    { media: "(prefers-color-scheme: dark)", color: "#070a09" },
+    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b1220" },
   ],
 };
 
@@ -83,7 +90,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en-IN" suppressHydrationWarning>
+    <html lang="en-IN" className={inter.variable} suppressHydrationWarning>
       <head>
         <script
           // Theme bootstrap must run before first paint.

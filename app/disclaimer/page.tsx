@@ -5,7 +5,7 @@ import { GITHUB_URL, SITE_NAME } from "@/lib/site";
 export const metadata = {
   title: "Disclaimer",
   description:
-    "Important limits of UPI Link: it is an independent utility, does not process or verify payments, and does not guarantee UPI IDs or link availability.",
+    "Important limits of UPI QR Generator: it is an independent utility, does not process or verify payments, and does not guarantee UPI IDs or link availability.",
   alternates: {
     canonical: "/disclaimer",
   },
@@ -34,7 +34,7 @@ export default function DisclaimerPage() {
           A link is not a guarantee.
         </h1>
         <p className="mt-4 text-base leading-7 text-ink-muted">
-          Please read these limits before using a UPI Link payment page. They
+          Please read these limits before using a UPI QR Generator payment page. They
           are short, and they matter.
         </p>
         <p className="mt-3 text-xs text-ink-subtle">
@@ -44,7 +44,7 @@ export default function DisclaimerPage() {
         <div className="legal-prose mt-10">
           <h2>Independent utility</h2>
           <p>
-            UPI Link is an independent, open-source utility for generating UPI
+            UPI QR Generator is an independent, open-source utility for generating UPI
             payment QR codes and shareable payment links. It is not affiliated
             with, endorsed by, or operated by the National Payments Corporation
             of India (NPCI), any bank, Google Pay, PhonePe, Paytm, or any other
@@ -53,7 +53,7 @@ export default function DisclaimerPage() {
 
           <h2>No payment processing</h2>
           <p>
-            UPI Link does not process, authorise, settle, or route payments. It
+            UPI QR Generator does not process, authorise, settle, or route payments. It
             does not hold or transmit money, and it is not a merchant, payment
             aggregator, or financial institution. Your payment is made entirely
             inside the UPI application and banking system you choose.
@@ -68,17 +68,18 @@ export default function DisclaimerPage() {
           </p>
           <p>
             Always check the recipient&apos;s name and UPI ID inside your
-            payment application before confirming a payment. UPI Link cannot
+            payment application before confirming a payment. UPI QR Generator cannot
             recover money sent to the wrong recipient.
           </p>
 
           <h2>No guarantee of link availability</h2>
           <p>
-            Payment pages are reconstructed from the information in the URL. No
-            website can promise that a URL will work forever. A link remains
-            reproducible only for as long as this domain, its hosting, and the
-            application remain available. Hosting changes, domain changes,
-            software changes, or service interruptions can affect old links.
+            Payment pages are reconstructed from the UPI ID and optional amount
+            in the URL. No website can promise that a URL will work forever. A
+            link remains reproducible only for as long as this domain, its
+            hosting, and the application remain available. Hosting changes,
+            domain changes, software changes, or service interruptions can
+            affect old links.
           </p>
 
           <h2>Payment application behaviour</h2>
@@ -86,7 +87,7 @@ export default function DisclaimerPage() {
             Android and iOS launch mechanisms are implemented according to each
             platform&apos;s capabilities. A payment application may not be
             installed, may change or remove its URL scheme, may block a launch,
-            or may show its own confirmation or error. UPI Link cannot detect
+            or may show its own confirmation or error. UPI QR Generator cannot detect
             installed applications reliably and does not claim that an app
             opened successfully.
           </p>
@@ -101,7 +102,7 @@ export default function DisclaimerPage() {
             <li>Verify the recipient before sending money.</li>
             <li>Never share your UPI PIN, OTP, password, or banking credentials.</li>
             <li>Only generate links for UPI IDs you are authorised to share.</li>
-            <li>Do not use UPI Link for fraud, impersonation, or unlawful activity.</li>
+            <li>Do not use UPI QR Generator for fraud, impersonation, or unlawful activity.</li>
             <li>Treat payment links as sensitive information.</li>
           </ul>
 
@@ -153,7 +154,7 @@ export default function DisclaimerPage() {
               Before every payment:
             </span>{" "}
             check the recipient name and UPI ID inside your UPI application.
-            UPI Link cannot verify who owns a UPI ID.
+            UPI QR Generator cannot verify who owns a UPI ID.
           </p>
         </div>
       </div>

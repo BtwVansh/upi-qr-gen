@@ -1,4 +1,4 @@
-export const THEME_STORAGE_KEY = "upilink-theme";
+export const THEME_STORAGE_KEY = "upiqr-theme";
 
 /**
  * Runs before paint to apply the saved or system theme and avoid a flash of

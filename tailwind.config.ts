@@ -29,6 +29,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
+          "var(--font-inter)",
           "Inter",
           "ui-sans-serif",
           "system-ui",
@@ -38,12 +39,14 @@ const config: Config = {
           "sans-serif",
         ],
         display: [
-          "Iowan Old Style",
-          "Apple Garamond",
-          "Baskerville",
-          "Times New Roman",
-          "Times",
-          "serif",
+          "var(--font-inter)",
+          "Inter",
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "sans-serif",
         ],
         mono: [
           "ui-monospace",
@@ -55,9 +58,9 @@ const config: Config = {
         ],
       },
       boxShadow: {
-        card: "0 1px 2px rgba(11, 15, 14, 0.04), 0 12px 32px -16px rgba(11, 15, 14, 0.18)",
-        lift: "0 2px 4px rgba(11, 15, 14, 0.04), 0 24px 60px -24px rgba(11, 15, 14, 0.28)",
-        qr: "0 1px 2px rgba(11, 15, 14, 0.06), 0 18px 48px -20px rgba(11, 15, 14, 0.24)",
+        card: "0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -18px rgba(15, 23, 42, 0.16)",
+        lift: "0 2px 4px rgba(15, 23, 42, 0.04), 0 16px 36px -22px rgba(15, 23, 42, 0.18)",
+        qr: "0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 28px -20px rgba(15, 23, 42, 0.18)",
       },
       borderRadius: {
         "4xl": "2rem",

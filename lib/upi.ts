@@ -3,8 +3,15 @@ import { SITE_URL } from "@/lib/site";
 const UPI_LOCAL_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9]$|^[A-Za-z0-9]$/;
 const UPI_PSP_PATTERN = /^[A-Za-z0-9][A-Za-z0-9.-]*[A-Za-z0-9]$|^[A-Za-z0-9]{2,}$/;
 
+/** UPI apps accept at most two decimal places; keep a generous sanity limit. */
+const MAX_AMOUNT = 99_999_999.99;
+
 export type UpiValidation =
   | { valid: true; upiId: string }
+  | { valid: false; error: string };
+
+export type AmountValidation =
+  | { valid: true; amount: string | null }
   | { valid: false; error: string };
 
 /**
@@ -114,13 +121,83 @@ export function isValidUpiId(input: string): boolean {
 }
 
 /**
- * Build the UPI payment URI. `encodeURIComponent` is applied exactly once to
- * the UPI ID: `name@okaxis` becomes `pa=name%40okaxis`. No amount is included,
- * so the payer chooses it inside their UPI application.
+ * Validate the optional payment amount. An empty value is valid and means the
+ * payer chooses the amount inside their UPI app. Valid amounts are normalised
+ * to two decimal places so the URI and the shareable URL stay canonical.
  */
-export function buildUpiUri(upiId: string): string {
+export function validateAmount(input: string): AmountValidation {
+  const value = input.trim().replace(/^₹\s*/, "");
+
+  if (!value) {
+    return { valid: true, amount: null };
+  }
+
+  if (!/^(?:\d+(?:\.\d{1,2})?|\.\d{1,2})$/.test(value)) {
+    return {
+      valid: false,
+      error:
+        "Enter a valid amount with up to two decimal places, or leave it blank.",
+    };
+  }
+
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric)) {
+    return {
+      valid: false,
+      error: "That amount is too large. Enter a smaller amount.",
+    };
+  }
+
+  if (numeric <= 0) {
+    return { valid: false, error: "The amount must be greater than zero." };
+  }
+
+  if (numeric > MAX_AMOUNT) {
+    return {
+      valid: false,
+      error: "That amount is too large. Enter a smaller amount.",
+    };
+  }
+
+  return { valid: true, amount: numeric.toFixed(2) };
+}
+
+/**
+ * Read the optional `amount` search param. Repeated params are rejected rather
+ * than silently choosing one, so a link always reconstructs one exact amount.
+ */
+export function readAmountParam(
+  param: string | string[] | undefined,
+): AmountValidation {
+  if (Array.isArray(param)) {
+    return {
+      valid: false,
+      error: "This payment link contains more than one amount.",
+    };
+  }
+
+  return validateAmount(param ?? "");
+}
+
+export function formatAmountInr(amount: string): string {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(amount));
+}
+
+/**
+ * Build the UPI payment URI. `encodeURIComponent` is applied exactly once to
+ * the UPI ID: `name@okaxis` becomes `pa=name%40okaxis`. When an amount is set it
+ * is embedded as `am`, with no amount the payer chooses it in their UPI app.
+ */
+export function buildUpiUri(upiId: string, amount?: string | null): string {
   const normalized = normalizeUpiId(upiId);
-  return `upi://pay?pa=${encodeURIComponent(normalized)}&cu=INR`;
+  const amountQuery = amount ? `&am=${encodeURIComponent(amount)}` : "";
+  return `upi://pay?pa=${encodeURIComponent(normalized)}${amountQuery}&cu=INR`;
 }
 
 /**
@@ -132,8 +209,19 @@ export function buildPaymentPath(upiId: string): string {
   return `/pay/${encodeURIComponent(normalizeUpiId(upiId))}`;
 }
 
-export function buildPaymentUrl(upiId: string): string {
-  return `${SITE_URL}${buildPaymentPath(upiId)}`;
+export function buildPaymentHref(
+  upiId: string,
+  amount?: string | null,
+): string {
+  const path = buildPaymentPath(upiId);
+  return amount ? `${path}?amount=${encodeURIComponent(amount)}` : path;
+}
+
+export function buildPaymentUrl(
+  upiId: string,
+  amount?: string | null,
+): string {
+  return `${SITE_URL}${buildPaymentHref(upiId, amount)}`;
 }
 
 /**

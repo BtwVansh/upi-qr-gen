@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { HeroForm } from "@/components/hero-form";
 import { LogoMark } from "@/components/logo";
+import { GITHUB_URL } from "@/lib/site";
 
 const paymentApps = [
   { name: "Google Pay", className: "bg-[#1a73e8]" },
@@ -33,7 +34,7 @@ const steps = [
     number: "01",
     title: "Enter your UPI ID",
     description:
-      "Just your UPI ID — no name, phone number, bank details, amount, PIN or OTP. We keep the request deliberately small.",
+      "Add your UPI ID and, if you like, the amount you want to receive. No name, phone number, bank details, PIN or OTP is needed.",
   },
   {
     number: "02",
@@ -58,7 +59,7 @@ const features = [
   {
     icon: Link2,
     title: "Links that rebuild themselves",
-    body: "The UPI ID lives in the URL. There is no database, no lookup step and no session dependency, so a link reopens the same payment page later.",
+    body: "The UPI ID and optional amount live in the URL. There is no database, no lookup step and no session dependency, so a link reopens the same payment page later.",
   },
   {
     icon: Smartphone,
@@ -74,19 +75,24 @@ const features = [
 
 const faqs = [
   {
-    question: "Is UPI Link free to use?",
+    question: "Is UPI QR Generator free to use?",
     answer:
       "Yes. There is no account, subscription or fee. It is a small, independent utility built to make UPI payment links easier to create and share.",
   },
   {
-    question: "Does UPI Link verify my UPI ID?",
+    question: "Does UPI QR Generator verify my UPI ID?",
     answer:
       "No. We check the basic syntax only. A correctly formatted UPI ID can still be inactive, mistyped or belong to someone else. Always confirm the recipient inside your payment app before paying.",
   },
   {
+    question: "Can I set a payment amount?",
+    answer:
+      "Yes, optionally. Enter an amount to embed it in the QR code and payment link, or leave the field blank for an open-amount QR where the payer chooses the amount in their UPI app.",
+  },
+  {
     question: "Where is my UPI ID stored?",
     answer:
-      "It is encoded into the payment URL and rendered in your browser. UPI Link does not write it to a database, account, local storage or session storage. The page is recreated from the URL each time it opens.",
+      "The UPI ID and any optional amount are encoded into the payment URL and rendered in your browser. UPI QR Generator does not write them to a database, account, local storage or session storage. The page is recreated from the URL each time it opens.",
   },
   {
     question: "Do payment links expire?",
@@ -106,7 +112,7 @@ const faqs = [
   {
     question: "Will you ever ask for my PIN or OTP?",
     answer:
-      "Never. UPI Link only needs a UPI ID. It never asks for a UPI PIN, OTP, password, card number, bank credentials, phone number or payment amount.",
+      "Never. UPI QR Generator needs a UPI ID and, optionally, the amount you want to receive. It never asks for a UPI PIN, OTP, password, card number, bank credentials or phone number.",
   },
 ];
 
@@ -129,15 +135,16 @@ export default function HomePage() {
             <h1 className="mt-6 text-[clamp(2.8rem,7vw,5.25rem)] font-semibold leading-[0.94] tracking-[-0.055em] text-ink">
               Your UPI.
               <br />
-              <span className="font-display font-normal italic tracking-[-0.035em] text-accent">
+              <span className="font-display font-semibold tracking-[-0.045em] text-accent">
                 One Link.
               </span>
             </h1>
 
             <p className="mt-6 max-w-xl text-[1.03rem] leading-7 text-ink-muted sm:text-lg sm:leading-8">
               Turn your UPI ID into a crisp payment QR code and a shareable
-              link. Send it once, print it, or let someone scan your screen —
-              no account and no stored payment data.
+              link, with an optional amount built in. Send it once, print it, or
+              let someone scan your screen — no account and no stored payment
+              data.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm text-ink-muted">
@@ -166,8 +173,8 @@ export default function HomePage() {
                 className="mt-0.5 size-4 shrink-0 text-accent"
                 aria-hidden="true"
               />
-              Only your UPI ID is required. Never enter a UPI PIN, OTP, password
-              or bank credentials.
+              Only your UPI ID is required; an amount is optional. Never enter
+              a UPI PIN, OTP, password or bank credentials.
             </p>
           </div>
 
@@ -222,10 +229,10 @@ export default function HomePage() {
             How it works
           </span>
           <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-ink sm:text-[2.6rem] sm:leading-[1.05]">
-            Three inputs. One link. No account.
+            One UPI ID. One link. No account.
           </h2>
           <p className="mt-4 text-base leading-7 text-ink-muted">
-            UPI Link does one job carefully: turn a UPI ID into something
+            UPI QR Generator does one job carefully: turn a UPI ID into something
             someone else can pay with. Everything happens in your browser.
           </p>
         </div>
@@ -237,7 +244,7 @@ export default function HomePage() {
               className="card group relative overflow-hidden p-6 transition duration-300 hover:-translate-y-0.5 hover:border-line-strong sm:p-7"
             >
               <div className="flex items-center justify-between">
-                <span className="font-display text-3xl italic text-ink-subtle/70">
+                <span className="font-display text-3xl font-semibold tracking-tight text-ink-subtle/70">
                   {step.number}
                 </span>
                 <span className="grid size-9 place-items-center rounded-full border border-line bg-canvas text-ink-subtle">
@@ -348,7 +355,7 @@ export default function HomePage() {
 
             <ul className="mt-7 space-y-3.5">
               {[
-                "Your UPI ID is encoded in the URL you choose to share.",
+                "Your UPI ID and optional amount are encoded in the URL you choose to share.",
                 "QR codes are generated locally in your browser, not fetched from a server.",
                 "We never ask for or accept UPI PINs, OTPs, passwords or bank credentials.",
                 "No analytics, advertising pixels or third-party tracking scripts.",
@@ -375,11 +382,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="relative">
-            <div
-              aria-hidden="true"
-              className="absolute -inset-4 rounded-[2.5rem] bg-accent-soft/50 blur-2xl"
-            />
+          <div>
             <div className="card relative overflow-hidden p-6 sm:p-8">
               <div className="flex items-center justify-between gap-4">
                 <div>
@@ -477,6 +480,15 @@ export default function HomePage() {
                 </Link>{" "}
                 covers the limits of this tool.
               </p>
+              <a
+                href={GITHUB_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-accent underline decoration-accent/30 underline-offset-4 transition hover:decoration-accent"
+              >
+                View source code on GitHub
+                <ArrowUpRight className="size-3.5" aria-hidden="true" />
+              </a>
             </div>
 
             <div className="divide-y divide-line border-y border-line">
@@ -500,28 +512,28 @@ export default function HomePage() {
 
       {/* CTA */}
       <section className="container-page py-20 sm:py-24">
-        <div className="relative overflow-hidden rounded-4xl bg-[#082f24] px-6 py-14 text-[#f3f4ef] sm:px-12 sm:py-16">
+        <div className="relative overflow-hidden rounded-4xl bg-[#0f172a] px-6 py-14 text-[#f8fafc] sm:px-12 sm:py-16">
           <div
             aria-hidden="true"
             className="absolute inset-0 opacity-[0.12]"
             style={{
               backgroundImage:
-                "radial-gradient(circle at 1px 1px, #f3f4ef 1px, transparent 0)",
+                "radial-gradient(circle at 1px 1px, #f8fafc 1px, transparent 0)",
               backgroundSize: "26px 26px",
             }}
           />
           <div className="relative flex flex-col items-start justify-between gap-8 lg:flex-row lg:items-end">
             <div className="max-w-xl">
               <div className="flex items-center gap-2.5">
-                <LogoMark className="bg-[#4cc79b] text-[#04130c]" />
-                <span className="text-sm font-medium text-[#bfe9d7]">
-                  UPI Link
+                <LogoMark className="bg-[#2563eb] text-[#ffffff]" />
+                <span className="text-sm font-medium text-[#bfdbfe]">
+                  UPI QR Generator
                 </span>
               </div>
               <h2 className="mt-6 text-3xl font-semibold tracking-[-0.035em] sm:text-[2.7rem] sm:leading-[1.04]">
                 Ready to turn your UPI ID into a link?
               </h2>
-              <p className="mt-4 text-sm leading-6 text-[#b9d8cc] sm:text-base">
+              <p className="mt-4 text-sm leading-6 text-[#cbd5e1] sm:text-base">
                 It takes seconds. No form-filling, no account, no payment data
                 stored.
               </p>
@@ -529,14 +541,14 @@ export default function HomePage() {
             <div className="flex flex-col gap-3 sm:flex-row">
               <a
                 href="#generator"
-                className="btn btn-lg bg-[#f3f4ef] text-[#082f24] hover:bg-white active:scale-[0.985]"
+                className="btn btn-lg bg-[#f8fafc] text-[#0f172a] hover:bg-white active:scale-[0.985]"
               >
                 Generate a QR
                 <ArrowRight className="size-4" aria-hidden="true" />
               </a>
               <Link
                 href="/privacy"
-                className="btn btn-lg border border-[#f3f4ef]/25 text-[#f3f4ef] hover:bg-[#f3f4ef]/10"
+                className="btn btn-lg border border-[#f8fafc]/25 text-[#f8fafc] hover:bg-[#f8fafc]/10"
               >
                 Privacy note
                 <ArrowUpRight className="size-4" aria-hidden="true" />

@@ -25,7 +25,7 @@ export function getQrFileName(upiId: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 48);
-  return `upi-link-${safe || "payment"}-qr.png`;
+  return `upi-qr-generator-${safe || "payment"}-qr.png`;
 }
 
 /**

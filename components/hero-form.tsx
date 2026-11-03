@@ -7,11 +7,12 @@ import {
   AlertCircle,
   ArrowRight,
   AtSign,
+  IndianRupee,
   Loader2,
   LockKeyhole,
   ShieldCheck,
 } from "lucide-react";
-import { buildPaymentPath, validateUpiId } from "@/lib/upi";
+import { buildPaymentHref, validateAmount, validateUpiId } from "@/lib/upi";
 import { cn } from "@/lib/cn";
 
 const EXAMPLES = ["name@okaxis", "username@ybl", "number@paytm"];
@@ -19,9 +20,12 @@ const EXAMPLES = ["name@okaxis", "username@ybl", "number@paytm"];
 export function HeroForm() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const amountRef = useRef<HTMLInputElement>(null);
   const consentRef = useRef<HTMLInputElement>(null);
   const [upiId, setUpiId] = useState("");
+  const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [amountError, setAmountError] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
   const [consentError, setConsentError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -39,6 +43,17 @@ export function HeroForm() {
 
     setError(null);
 
+    const amountResult = validateAmount(amount);
+
+    if (!amountResult.valid) {
+      setAmountError(amountResult.error);
+      setPending(false);
+      amountRef.current?.focus();
+      return;
+    }
+
+    setAmountError(null);
+
     if (!consent) {
       setConsentError("Please acknowledge the disclaimer before generating.");
       consentRef.current?.focus();
@@ -47,7 +62,7 @@ export function HeroForm() {
 
     setConsentError(null);
     setPending(true);
-    router.push(buildPaymentPath(result.upiId));
+    router.push(buildPaymentHref(result.upiId, amountResult.amount));
   }
 
   function applyExample(example: string) {
@@ -59,16 +74,7 @@ export function HeroForm() {
 
   return (
     <div className="relative" id="generator">
-      <div
-        aria-hidden="true"
-        className="absolute -inset-3 rounded-[2.25rem] bg-accent-soft/70 blur-xl"
-      />
-      <div className="card relative overflow-hidden p-6 shadow-lift sm:p-8">
-        <div
-          aria-hidden="true"
-          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent"
-        />
-
+      <div className="card relative overflow-hidden p-6 sm:p-8">
         <div className="flex items-center justify-between gap-3">
           <span className="eyebrow">
             <span className="size-1.5 rounded-full bg-accent" />
@@ -133,7 +139,7 @@ export function HeroForm() {
           >
             <p className="text-xs leading-5 text-ink-subtle">
               Your UPI ID, like <span className="font-mono">name@okaxis</span>.
-              No amount, phone number or bank details needed.
+              No phone number or bank details needed.
             </p>
           </div>
 
@@ -167,6 +173,69 @@ export function HeroForm() {
             ))}
           </div>
 
+          <div className="mt-5">
+            <div className="flex items-center justify-between gap-3">
+              <label
+                htmlFor="payment-amount"
+                className="text-sm font-semibold tracking-tight text-ink"
+              >
+                Payment Amount (INR)
+              </label>
+              <span className="rounded-full border border-line bg-canvas px-2.5 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-ink-subtle">
+                Optional
+              </span>
+            </div>
+            <div className="relative mt-2">
+              <IndianRupee
+                className="pointer-events-none absolute left-4 top-1/2 size-[17px] -translate-y-1/2 text-ink-subtle"
+                aria-hidden="true"
+              />
+              <input
+                ref={amountRef}
+                id="payment-amount"
+                name="payment-amount"
+                type="text"
+                value={amount}
+                onChange={(event) => {
+                  setAmount(event.target.value);
+                  if (amountError) setAmountError(null);
+                }}
+                onBlur={() => {
+                  if (amount.trim()) {
+                    const result = validateAmount(amount);
+                    setAmountError(result.valid ? null : result.error);
+                  }
+                }}
+                placeholder="e.g. 500.00"
+                autoComplete="off"
+                inputMode="decimal"
+                aria-invalid={amountError ? true : undefined}
+                aria-describedby={cn(
+                  "amount-hint",
+                  amountError && "amount-error",
+                )}
+                className={cn("field pl-11", amountError && "field-error")}
+              />
+            </div>
+            <p id="amount-hint" className="mt-2 text-xs leading-5 text-ink-subtle">
+              Leave blank to create an open-amount QR code. The payer enters the
+              amount in their UPI app.
+            </p>
+            {amountError && (
+              <p
+                id="amount-error"
+                role="alert"
+                className="mt-2 flex items-start gap-1.5 text-xs font-medium leading-5 text-danger"
+              >
+                <AlertCircle
+                  className="mt-0.5 size-3.5 shrink-0"
+                  aria-hidden="true"
+                />
+                {amountError}
+              </p>
+            )}
+          </div>
+
           <div className="mt-5 rounded-2xl border border-line bg-canvas/70 p-3.5">
             <div className="flex items-start gap-2.5">
               <input
@@ -190,7 +259,7 @@ export function HeroForm() {
                 htmlFor="disclaimer-consent"
                 className="cursor-pointer text-xs leading-5 text-ink-muted"
               >
-                I understand UPI Link is an independent tool, does not verify
+                I understand UPI QR Generator is an independent tool, does not verify
                 this UPI ID, and does not process payments. I will verify the
                 recipient before paying.
               </label>

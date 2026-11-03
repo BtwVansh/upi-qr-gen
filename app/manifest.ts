@@ -9,8 +9,8 @@ export default function manifest(): MetadataRoute.Manifest {
       "Generate UPI payment QR codes and shareable, stateless payment links.",
     start_url: "/",
     display: "standalone",
-    background_color: "#f7f6f1",
-    theme_color: "#0b7a5c",
+    background_color: "#f8fafc",
+    theme_color: "#2563eb",
     icons: [
       {
         src: "/icon.svg",

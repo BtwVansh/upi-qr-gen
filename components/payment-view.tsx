@@ -1,13 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  type FormEvent,
+} from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   ArrowLeft,
   ArrowUpRight,
   Check,
   Download,
+  IndianRupee,
   Info,
   Link2,
   Loader2,
@@ -30,10 +38,17 @@ import {
   type PaymentApp,
 } from "@/lib/payment-apps";
 import { downloadQrPng } from "@/lib/qr";
-import { getUpiLocalPart } from "@/lib/upi";
+import { SITE_NAME } from "@/lib/site";
+import {
+  buildPaymentHref,
+  formatAmountInr,
+  getUpiLocalPart,
+  validateAmount,
+} from "@/lib/upi";
 
 type PaymentViewProps = {
   upiId: string;
+  amount: string | null;
   upiUri: string;
   paymentUrl: string;
 };
@@ -43,15 +58,32 @@ type LaunchNotice = {
   phase: "launching" | "fallback";
 };
 
-export function PaymentView({ upiId, upiUri, paymentUrl }: PaymentViewProps) {
+export function PaymentView({
+  upiId,
+  amount,
+  upiUri,
+  paymentUrl,
+}: PaymentViewProps) {
+  const router = useRouter();
   const { notify } = useToast();
   const [device, setDevice] = useState<DeviceInfo>(UNKNOWN_DEVICE);
   const [canShare, setCanShare] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [launchNotice, setLaunchNotice] = useState<LaunchNotice | null>(null);
+  const [editingAmount, setEditingAmount] = useState(false);
+  const [amountInput, setAmountInput] = useState(amount ?? "");
+  const [amountError, setAmountError] = useState<string | null>(null);
+  const [isUpdating, startTransition] = useTransition();
   const launchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const displayUrl = paymentUrl.replace(/^https?:\/\//, "");
   const localPart = getUpiLocalPart(upiId);
+  const amountLabel = amount ? formatAmountInr(amount) : null;
+
+  useEffect(() => {
+    setAmountInput(amount ?? "");
+    setAmountError(null);
+    setEditingAmount(false);
+  }, [amount]);
 
   useEffect(() => {
     setDevice(detectDevice());
@@ -117,8 +149,12 @@ export function PaymentView({ upiId, upiUri, paymentUrl }: PaymentViewProps) {
 
     try {
       await navigator.share({
-        title: `Pay ${upiId} · UPI Link`,
-        text: `UPI payment link for ${upiId}`,
+        title: amountLabel
+          ? `Pay ${amountLabel} to ${upiId} · ${SITE_NAME}`
+          : `Pay ${upiId} · ${SITE_NAME}`,
+        text: amountLabel
+          ? `UPI payment link for ${upiId} (${amountLabel})`
+          : `UPI payment link for ${upiId}`,
         url: paymentUrl,
       });
       notify("Payment link shared.", "success");
@@ -145,6 +181,24 @@ export function PaymentView({ upiId, upiUri, paymentUrl }: PaymentViewProps) {
       setLaunchNotice({ app, phase: "fallback" });
       launchTimer.current = null;
     }, 2600);
+  }
+
+  function handleAmountSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const result = validateAmount(amountInput);
+
+    if (!result.valid) {
+      setAmountError(result.error);
+      return;
+    }
+
+    setAmountError(null);
+    setEditingAmount(false);
+    startTransition(() => {
+      router.replace(buildPaymentHref(upiId, result.amount), {
+        scroll: false,
+      });
+    });
   }
 
   const isMobile = device.platform === "android" || device.platform === "ios";
@@ -177,13 +231,14 @@ export function PaymentView({ upiId, upiUri, paymentUrl }: PaymentViewProps) {
           </span>
           <h1 className="mt-4 break-words text-[clamp(2.2rem,6vw,3.8rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
             Pay{" "}
-            <span className="font-display font-normal italic tracking-[-0.03em] text-accent">
+            <span className="font-display font-semibold tracking-[-0.04em] text-accent">
               {localPart}
             </span>
           </h1>
           <p className="mt-4 max-w-xl text-base leading-7 text-ink-muted">
-            Scan the QR code with any UPI app, or use the payment buttons below
-            on your phone. Verify the recipient before you pay.
+            {amountLabel
+              ? `This page requests ${amountLabel}. Scan the QR code or use a payment app, then verify the recipient before you pay.`
+              : "Scan the QR code with any UPI app, or use the payment buttons below on your phone. Verify the recipient before you pay."}
           </p>
         </div>
 
@@ -191,7 +246,7 @@ export function PaymentView({ upiId, upiUri, paymentUrl }: PaymentViewProps) {
         <div className="mt-7 flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4 shadow-card sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div className="flex min-w-0 items-center gap-3.5">
             <span
-              className="grid size-11 shrink-0 place-items-center rounded-2xl bg-accent-soft font-display text-xl italic text-accent"
+              className="grid size-11 shrink-0 place-items-center rounded-2xl bg-accent-soft font-display text-xl font-semibold text-accent"
               aria-hidden="true"
             >
               {localPart.charAt(0).toUpperCase()}
@@ -217,7 +272,7 @@ export function PaymentView({ upiId, upiUri, paymentUrl }: PaymentViewProps) {
 
         <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-ink-subtle">
           <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-          The format was checked locally, but UPI Link cannot verify that this
+          The format was checked locally, but UPI QR Generator cannot verify that this
           UPI ID is active or belongs to the intended recipient.
         </p>
 
@@ -236,15 +291,122 @@ export function PaymentView({ upiId, upiUri, paymentUrl }: PaymentViewProps) {
                 Scan to pay
               </h2>
               <span className="rounded-full border border-line bg-canvas px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-ink-subtle">
-                No amount set
+                {amountLabel ?? "Open amount"}
               </span>
             </div>
 
-            <div className="mt-5 rounded-3xl border border-line bg-white p-4 shadow-qr sm:p-5">
+            <div className="mt-5 rounded-2xl border border-line bg-canvas p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-ink-subtle">
+                    Payment amount
+                  </p>
+                  <p className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+                    {amountLabel ?? "Open amount"}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-ink-subtle">
+                    {amountLabel
+                      ? "Set in this QR code. Confirm the amount in your UPI app."
+                      : "The payer chooses the amount in their UPI app."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingAmount((editing) => !editing);
+                    setAmountError(null);
+                  }}
+                  aria-expanded={editingAmount}
+                  aria-controls="amount-editor"
+                  className="btn-secondary btn-sm shrink-0"
+                >
+                  {editingAmount ? "Cancel" : "Edit"}
+                </button>
+              </div>
+
+              {editingAmount && (
+                <form
+                  id="amount-editor"
+                  onSubmit={handleAmountSubmit}
+                  className="mt-4 border-t border-line pt-4"
+                >
+                  <label
+                    htmlFor="payment-amount-edit"
+                    className="text-xs font-semibold text-ink"
+                  >
+                    Payment Amount (INR)
+                  </label>
+                  <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                    <div className="relative min-w-0 flex-1">
+                      <IndianRupee
+                        className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-ink-subtle"
+                        aria-hidden="true"
+                      />
+                      <input
+                        id="payment-amount-edit"
+                        name="payment-amount"
+                        type="text"
+                        value={amountInput}
+                        onChange={(event) => {
+                          setAmountInput(event.target.value);
+                          if (amountError) setAmountError(null);
+                        }}
+                        placeholder="Leave blank for open amount"
+                        autoComplete="off"
+                        inputMode="decimal"
+                        aria-invalid={amountError ? true : undefined}
+                        aria-describedby={
+                          amountError ? "amount-edit-error" : undefined
+                        }
+                        className={cn(
+                          "field !h-12 pl-10 text-sm",
+                          amountError && "field-error",
+                        )}
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isUpdating}
+                      className="btn-primary btn-md !h-12 shrink-0"
+                    >
+                      {isUpdating ? (
+                        <Loader2
+                          className="size-4 animate-spin"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <Check className="size-4" aria-hidden="true" />
+                      )}
+                      {isUpdating ? "Updating…" : "Update QR"}
+                    </button>
+                  </div>
+                  <p className="mt-2 text-[0.68rem] leading-5 text-ink-subtle">
+                    The QR code and shareable link update together.
+                  </p>
+                  {amountError && (
+                    <p
+                      id="amount-edit-error"
+                      role="alert"
+                      className="mt-2 flex items-start gap-1.5 text-xs font-medium leading-5 text-danger"
+                    >
+                      <AlertCircle
+                        className="mt-0.5 size-3.5 shrink-0"
+                        aria-hidden="true"
+                      />
+                      {amountError}
+                    </p>
+                  )}
+                </form>
+              )}
+            </div>
+
+            <div className="mt-4 rounded-3xl border border-line bg-white p-4 shadow-qr sm:p-5">
               <QrCode
                 value={upiUri}
                 size={720}
-                alt={`UPI payment QR code for ${upiId}`}
+                alt={`UPI payment QR code for ${upiId}${
+                  amountLabel ? ` with amount ${amountLabel}` : ""
+                }`}
               />
             </div>
 
@@ -519,8 +681,9 @@ export function PaymentView({ upiId, upiUri, paymentUrl }: PaymentViewProps) {
               </div>
 
               <p className="mt-3 text-[0.68rem] leading-5 text-ink-subtle">
-                The UPI ID is part of the URL and may appear in browser history,
-                messages and hosting logs. Share it only with the intended payer.
+                The UPI ID and optional amount are part of the URL and may
+                appear in browser history, messages and hosting logs. Share the
+                link only with the intended payer.
               </p>
             </section>
 
@@ -546,8 +709,10 @@ export function PaymentView({ upiId, upiUri, paymentUrl }: PaymentViewProps) {
                     body: "Confirm the name and UPI ID shown inside your payment app before continuing.",
                   },
                   {
-                    title: "Enter the amount and pay",
-                    body: "This link does not set an amount. Enter the amount yourself and confirm with your UPI PIN in your app.",
+                    title: amountLabel ? "Confirm the amount and pay" : "Enter the amount and pay",
+                    body: amountLabel
+                      ? `This page requests ${amountLabel}. Confirm the amount in your UPI app and pay with your UPI PIN.`
+                      : "This link does not set an amount. Enter the amount yourself and confirm with your UPI PIN in your app.",
                   },
                 ].map((step, index) => (
                   <li key={step.title} className="flex gap-3">
@@ -573,7 +738,7 @@ export function PaymentView({ upiId, upiUri, paymentUrl }: PaymentViewProps) {
                   aria-hidden="true"
                 />
                 <span>
-                  UPI Link never asks for your UPI PIN, OTP, password, or bank
+                  UPI QR Generator never asks for your UPI PIN, OTP, password, or bank
                   details. It does not process or verify this payment.{" "}
                   <Link
                     href="/disclaimer"

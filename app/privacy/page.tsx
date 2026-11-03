@@ -5,7 +5,7 @@ import { GITHUB_URL, SITE_NAME } from "@/lib/site";
 export const metadata = {
   title: "Privacy",
   description:
-    "How UPI Link handles your UPI ID, payment links and browser data. No database, no accounts and no payment credentials.",
+    "How UPI QR Generator handles your UPI ID, payment links and browser data. No database, no accounts and no payment credentials.",
   alternates: {
     canonical: "/privacy",
   },
@@ -34,9 +34,9 @@ export default function PrivacyPage() {
           Your UPI ID is not ours to keep.
         </h1>
         <p className="mt-4 text-base leading-7 text-ink-muted">
-          UPI Link is a stateless utility. It creates a QR code and a payment
-          link from the UPI ID you enter. It does not store payment records,
-          require an account, or process money.
+          UPI QR Generator is a stateless utility. It creates a QR code and a payment
+          link from the UPI ID and optional amount you enter. It does not store
+          payment records, require an account, or process money.
         </p>
         <p className="mt-3 text-xs text-ink-subtle">
           Last updated: 2 November 2026
@@ -46,23 +46,25 @@ export default function PrivacyPage() {
           <h2>Information you provide</h2>
           <p>
             The only information requested is a UPI ID, such as{" "}
-            <span className="font-mono text-[0.85em]">name@okaxis</span>. You do
-            not create an account. We do not ask for your name, phone number,
-            bank account number, card details, UPI PIN, password, OTP, or
-            payment amount.
+            <span className="font-mono text-[0.85em]">name@okaxis</span>, and an
+            optional payment amount. You do not create an account. We do not ask
+            for your name, phone number, bank account number, card details, UPI
+            PIN, password or OTP.
           </p>
 
           <h2>How your UPI ID is used</h2>
           <p>
-            Your browser uses the UPI ID to build a standard UPI payment URI
-            (<span className="font-mono text-[0.85em]">upi://pay?pa=…&amp;cu=INR</span>)
+            Your browser uses the UPI ID and optional amount to build a standard
+            UPI payment URI
+            (<span className="font-mono text-[0.85em]">upi://pay?pa=…&amp;am=500.00&amp;cu=INR</span>)
             and render that URI as a QR code. This happens locally in your
             browser.
           </p>
           <p>
-            The UPI ID is also encoded into the payment page URL, for example{" "}
+            The UPI ID and optional amount are also encoded into the payment page
+            URL, for example{" "}
             <span className="font-mono text-[0.85em] break-all">
-              https://upigenerator.netlify.app/pay/name%40okaxis
+              https://upigenerator.netlify.app/pay/name%40okaxis?amount=500.00
             </span>
             . That URL is the complete source of truth for the payment page. It
             is not a reference to a database record.
@@ -82,10 +84,11 @@ export default function PrivacyPage() {
 
           <h2>Your browser and your shared link</h2>
           <p>
-            A payment URL contains the UPI ID, so it can appear in your browser
-            history, bookmarks, clipboard, and any messaging application you use
-            to share it. Treat a payment link with the same care as the UPI ID
-            itself. Anyone who has the link can reconstruct the payment page.
+            A payment URL contains the UPI ID and any amount you set, so it can
+            appear in your browser history, bookmarks, clipboard, and any
+            messaging application you use to share it. Treat a payment link with
+            the same care as the UPI ID itself. Anyone who has the link can
+            reconstruct the payment page.
           </p>
 
           <h2>Hosting and technical logs</h2>
@@ -94,9 +97,9 @@ export default function PrivacyPage() {
             and its content delivery network may process technical request data
             such as IP addresses, browser user agents, timestamps and requested
             URLs for security, reliability and operational purposes. Those URLs
-            can include the UPI ID because it is part of the path. We do not
-            control those infrastructure logs. See Netlify&apos;s own privacy
-            documentation for details.
+            can include the UPI ID and optional amount because they are part of
+            the path and query string. We do not control those infrastructure
+            logs. See Netlify&apos;s own privacy documentation for details.
           </p>
           <p>
             Your browser may also store your light/dark theme preference in
@@ -107,8 +110,8 @@ export default function PrivacyPage() {
           <h2>Payment applications and third parties</h2>
           <p>
             Choosing a payment application can hand the UPI payment URI to that
-            third-party app. Once you leave UPI Link, the app&apos;s own privacy
-            policy and terms apply. UPI Link does not receive confirmation of a
+            third-party app. Once you leave UPI QR Generator, the app&apos;s own privacy
+            policy and terms apply. UPI QR Generator does not receive confirmation of a
             payment and has no access to your bank account.
           </p>
 
@@ -145,7 +148,7 @@ export default function PrivacyPage() {
 
         <div className="mt-10 rounded-2xl border border-line bg-surface p-5">
           <p className="text-sm text-ink-muted">
-            UPI Link is an independent project. It is not affiliated with NPCI,
+            UPI QR Generator is an independent project. It is not affiliated with NPCI,
             Google Pay, PhonePe, Paytm, or any bank.
           </p>
           <Link

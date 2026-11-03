@@ -1,4 +1,4 @@
-# UPI Link — Netlify configuration
+# UPI QR Generator — Netlify configuration
 # Netlify's native Next.js integration installs and manages the adapter.
 # Do not pin or add @netlify/plugin-nextjs manually.
 

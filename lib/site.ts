@@ -10,9 +10,9 @@ export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://upigenerator.netlify.app"
 ).replace(/\/+$/, "");
 
-export const SITE_NAME = "UPI Link";
+export const SITE_NAME = "UPI QR Generator";
 export const SITE_TAGLINE = "Your UPI. One Link.";
 export const SITE_DESCRIPTION =
-  "Create a scannable UPI payment QR code and a permanent, shareable payment link in seconds. No sign-up, no fees, no stored payment data.";
+  "Create a scannable UPI payment QR code and a permanent, shareable payment link in seconds. Add an optional amount, with no sign-up, fees or stored payment data.";
 
-export const GITHUB_URL = "https://github.com/btwvansh/upi-gen";
+export const GITHUB_URL = "https://github.com/BtwVansh/upi-qr-gen";

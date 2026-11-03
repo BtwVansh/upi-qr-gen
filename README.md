@@ -1,34 +1,43 @@
-# UPI Link
+# UPI QR Generator
 
 **Your UPI. One Link.**
 
-UPI Link turns a UPI ID into a scannable payment QR code and a permanent,
-shareable payment page. There is no account, no database, no payment
-processing, and no stored payment data.
+UPI QR Generator turns a UPI ID into a scannable payment QR code and a permanent,
+shareable payment page, with an optional payment amount. There is no account, no
+database, no payment processing, and no stored payment data.
 
 A payment page is reconstructed entirely from its URL:
 
 ```
-https://upigenerator.netlify.app/pay/name%40okaxis
+https://upigenerator.netlify.app/pay/name%40okaxis?amount=500.00
                           ↓
-        /pay/name%40okaxis  →  name@okaxis  →  upi://pay?pa=name%40okaxis&cu=INR
+  /pay/name%40okaxis + amount=500.00
+                          ↓
+  name@okaxis + 500.00 → upi://pay?pa=name%40okaxis&am=500.00&cu=INR
                           ↓
               QR code rendered locally in the browser
 ```
 
-The UPI ID in the path is the only state. Reopening the same URL — today,
-tomorrow, or from a different browser — produces the same QR code.
+The UPI ID in the path and the optional `amount` query are the only state.
+Reopening the same URL — today, tomorrow, or from a different browser — produces
+the same QR code.
+
+Source code: <https://github.com/BtwVansh/upi-qr-gen>
 
 ---
 
 ## Features
 
-- **UPI ID to QR in seconds** — enter a UPI ID, accept the disclaimer, and get
-  a payment page.
-- **Stateless payment links** — the UPI ID is encoded in the URL path and the
-  QR code is rebuilt client-side. No database or backend storage.
-- **No amount baked in** — the QR contains `cu=INR` and the payee address only.
-  The payer enters the amount in their own UPI app.
+- **UPI ID to QR in seconds** — enter a UPI ID, optionally add an amount, accept
+  the disclaimer, and get a payment page.
+- **Optional payment amount** — enter a positive amount with up to two decimals
+  to embed `am` in the UPI URI and display it on the payment page. Leave it
+  blank for an open-amount QR.
+- **Stateless payment links** — the UPI ID and optional amount are encoded in
+  the URL, and the QR code is rebuilt client-side. No database or backend
+  storage.
+- **Editable amount on the payment page** — changing the amount regenerates the
+  QR code and the shareable URL together.
 - **Native app buttons** — Google Pay, PhonePe, and Paytm, with
   platform-appropriate launch URLs.
 - **Works on desktop too** — the same page shows the QR and copy/download/share
@@ -93,7 +102,7 @@ npm start
 | `npm start` | Serve the production build |
 | `npm run lint` | Run ESLint |
 | `npm run typecheck` | Run TypeScript without emitting files |
-| `npm run verify` | Run the 24 deterministic unit checks |
+| `npm run verify` | Run the 32 deterministic unit checks |
 | `npm run check` | Typecheck + lint + unit checks |
 
 ---
@@ -102,8 +111,8 @@ npm start
 
 | Route | Rendering | Description |
 | --- | --- | --- |
-| `/` | Static | Landing page and UPI link generator |
-| `/pay/[upi]` | Dynamic (server-rendered) | Payment page reconstructed from the UPI ID |
+| `/` | Static | Landing page and UPI QR generator |
+| `/pay/[upi]` | Dynamic (server-rendered) | Payment page reconstructed from the UPI ID and optional `amount` query |
 | `/privacy` | Static | Privacy notice |
 | `/disclaimer` | Static | Disclaimer and limitations |
 | `/robots.txt`, `/sitemap.xml`, `/manifest.webmanifest` | Generated | Crawler and app metadata |
@@ -128,27 +137,44 @@ performs syntax checks only:
 - allowed character sets, with letters or digits at both ends
 - no internal whitespace
 
-A syntactically valid ID is **not** a verified ID. UPI Link cannot know whether
+A syntactically valid ID is **not** a verified ID. UPI QR Generator cannot know whether
 the handle exists, is active, or belongs to the intended recipient.
 
-### 2. Encoding
+### 2. Optional amount
+
+`validateAmount()` accepts a positive number with at most two decimal places,
+ignores a leading `₹` and surrounding whitespace, and canonicalises the value to
+two decimals. Blank input is valid and means the payer chooses the amount.
+
+- `500` → `500.00`
+- `12.5` → `12.50`
+- `0`, `-5`, `1.234`, `abc` → rejected
+- repeated `?amount=` parameters → rejected
+
+The amount is part of the URL query, so `/pay/ABCD%40OKAXIS?amount=500.00`
+reconstructs the same QR code. Invalid or repeated amounts render the custom 404
+page rather than silently choosing a value.
+
+### 3. Encoding
 
 The UPI ID is encoded exactly once as a URL path segment and exactly once
-inside the UPI URI:
+inside the UPI URI. The amount is included as `am` only when one is set:
 
 ```ts
-buildPaymentPath("name@okaxis") // "/pay/name%40okaxis"
-buildUpiUri("name@okaxis")      // "upi://pay?pa=name%40okaxis&cu=INR"
+buildPaymentHref("name@okaxis")          // "/pay/name%40okaxis"
+buildPaymentHref("name@okaxis", "500.00") // "/pay/name%40okaxis?amount=500.00"
+buildUpiUri("name@okaxis")               // "upi://pay?pa=name%40okaxis&cu=INR"
+buildUpiUri("name@okaxis", "500.00")     // "upi://pay?pa=name%40okaxis&am=500.00&cu=INR"
 ```
 
-### 3. Decoding
+### 4. Decoding
 
 Next.js 15 supplies dynamic route params percent-encoded in this app's runtime,
 so `readUpiRouteParam()` calls `decodeURIComponent` **once**, then validates.
 Double-encoded input (`name%2540okaxis`) decodes to a literal `%40`, which fails
 validation instead of being decoded a second time.
 
-### 4. QR generation
+### 5. QR generation
 
 `components/qr-code.tsx` calls `qrcode` in the browser and renders a PNG data
 URL. The URI is never sent to a server, and no QR image is stored anywhere.
@@ -195,11 +221,11 @@ Safari, the QR code, or another UPI app.
 ## Project structure
 
 ```
-upi-gener/
+realupi/
 ├── app/
 │   ├── layout.tsx              # Metadata, theme bootstrap, header/footer shell
 │   ├── page.tsx                # Landing page
-│   ├── pay/[upi]/page.tsx      # Dynamic payment route + metadata
+│   ├── pay/[upi]/page.tsx      # Dynamic payment route, amount parsing, metadata
 │   ├── privacy/page.tsx
 │   ├── disclaimer/page.tsx
 │   ├── not-found.tsx           # Custom 404
@@ -211,23 +237,23 @@ upi-gener/
 │   ├── opengraph-image.tsx
 │   └── twitter-image.tsx
 ├── components/
-│   ├── hero-form.tsx           # UPI input, validation, disclaimer, navigation
-│   ├── payment-view.tsx        # Payment page UI and actions
+│   ├── hero-form.tsx           # UPI and amount inputs, validation, disclaimer
+│   ├── payment-view.tsx        # Payment page UI, amount editor, actions
 │   ├── qr-code.tsx             # Client-side QR renderer
 │   ├── site-chrome.tsx         # Header and footer
 │   ├── theme-toggle.tsx
 │   ├── toast.tsx
 │   └── logo.tsx
 ├── lib/
-│   ├── upi.ts                  # Validation, URI/URL construction, route parsing
+│   ├── upi.ts                  # Validation, amount handling, URI/URL construction
 │   ├── device.ts               # Testable platform detection
 │   ├── payment-apps.ts         # App definitions, Android/iOS launch URLs
 │   ├── qr.ts                   # PNG data URL and download helper
 │   ├── clipboard.ts
-│   ├── site.ts                 # Site identity and canonical origin
+│   ├── site.ts                 # Site identity, canonical origin, GitHub URL
 │   ├── theme.ts
 │   └── cn.ts
-├── scripts/verify.ts           # 24 automated checks
+├── scripts/verify.ts           # 32 automated checks
 ├── netlify.toml
 ├── next.config.ts
 ├── tailwind.config.ts
@@ -253,7 +279,7 @@ a `basePath`.
 
    | Setting | Value |
    | --- | --- |
-   | Base directory | repository root, or `upi-gener` if the app is nested |
+   | Base directory | repository root (the app lives at the repository root) |
    | Build command | `npm run build` |
    | Publish directory | `.next` |
    | Node version | `22` (also pinned in `netlify.toml`) |
@@ -273,9 +299,13 @@ different origin. The default is `https://upigenerator.netlify.app`.
 
 - `https://upigenerator.netlify.app/` loads.
 - `https://upigenerator.netlify.app/pay/name%40okaxis` loads **directly**.
+- `https://upigenerator.netlify.app/pay/name%40okaxis?amount=500.00` loads and
+  shows ₹500.00.
 - Refreshing that payment URL returns the same page (not a 404).
-- An invalid payment URL and an unknown path both return the custom 404 page.
-- The QR decodes to `upi://pay?pa=name%40okaxis&cu=INR`.
+- An invalid payment URL, an invalid amount, and an unknown path all return the
+  custom 404 page.
+- The QR decodes to `upi://pay?pa=name%40okaxis&cu=INR` without an amount or
+  `upi://pay?pa=name%40okaxis&am=500.00&cu=INR` with an amount.
 
 `netlify.toml` also sets security headers (`X-Content-Type-Options`,
 `X-Frame-Options`, `Referrer-Policy`, and a restrictive `Permissions-Policy`).
@@ -284,15 +314,19 @@ different origin. The default is `https://upigenerator.netlify.app`.
 
 ## Testing performed
 
-Automated:
+Automated after the amount and branding update:
 
 - `npm run typecheck` — clean
 - `npm run lint` — clean
-- `npm run verify` — **24/24** checks passed, covering validation, encoding,
-  route decoding, URL construction, app launch URLs, and platform detection
-- `npm run build` — production build succeeds
+- `npm run verify` — **32/32** checks passed, covering validation, amount
+  handling, encoding, route decoding, URL construction, app launch URLs, and
+  platform detection
 
-Headless Chrome checks against the production build:
+The production build and headless Chrome checks below were completed before the
+amount and branding update. Re-run `npm run build` and repeat the browser checks
+before deploying this version.
+
+Baseline browser checks:
 
 - QR renders and decodes to `upi://pay?pa=name%40okaxis&cu=INR`
 - The same URL produces an identical QR after a hard reload and in a fresh tab
@@ -333,14 +367,14 @@ development-only tooling and are not shipped to production.
 
 ## Privacy and security notes
 
-- UPI Link never asks for a UPI PIN, OTP, password, card number, or bank
+- UPI QR Generator never asks for a UPI PIN, OTP, password, card number, or bank
   credentials.
-- The UPI ID travels in the URL path. It can appear in browser history,
-  messaging apps, and hosting access logs — that is inherent to a stateless
-  link. The UI warns users to share links only with the intended payer.
+- The UPI ID and optional amount travel in the URL. They can appear in browser
+  history, messaging apps, and hosting access logs — that is inherent to a
+  stateless link. The UI warns users to share links only with the intended payer.
 - Payment pages set `noindex, nofollow, nocache` and `/pay/` is disallowed in
   `robots.txt`.
-- The only `localStorage` value is the theme preference (`upilink-theme`).
+- The only `localStorage` value is the theme preference (`upiqr-theme`).
   UPI IDs and payment data are never stored there.
 - The QR code is generated locally; the UPI URI is not sent to a server.
 - No analytics, advertising pixels, or third-party tracking scripts are loaded.
@@ -353,7 +387,7 @@ development-only tooling and are not shipped to production.
 1. **Format validation only.** A valid-looking UPI ID may be inactive, belong to
    someone else, or be mistyped. The payer must verify the recipient inside
    their UPI app before paying.
-2. **No payment processing.** UPI Link only prepares a UPI URI and QR code. It
+2. **No payment processing.** UPI QR Generator only prepares a UPI URI and QR code. It
    cannot confirm that a payment happened.
 3. **App launch reliability is controlled by the device.** Installed-app
    detection is not exposed to websites. Buttons can fail silently or open a
@@ -361,14 +395,16 @@ development-only tooling and are not shipped to production.
 4. **iOS custom schemes may be blocked.** Some browsers and iOS versions prompt
    or refuse to open a scheme. Safari and the QR code are the reliable fallbacks.
 5. **The URL is the state.** If a link is truncated or altered, the payment page
-   cannot be reconstructed. There is no server-side record to recover it.
-6. **UPI IDs in URLs are visible.** This is a deliberate trade-off for
-   statelessness; do not use the service for IDs you consider secret.
+   cannot be reconstructed. Changing or removing `?amount=` changes the QR code.
+   There is no server-side record to recover the original.
+6. **UPI IDs and amounts in URLs are visible.** This is a deliberate trade-off
+   for statelessness; do not use the service for IDs or amounts you consider
+   secret.
 
 ---
 
 ## License
 
-This project is provided as-is for personal and commercial use. UPI Link is an
+This project is provided as-is for personal and commercial use. UPI QR Generator is an
 independent utility and is not affiliated with NPCI, Google Pay, PhonePe, Paytm,
 or any bank or payment provider.

@@ -57,7 +57,7 @@ export function SiteFooter() {
             </p>
             <p className="mt-5 flex items-start gap-2 text-xs leading-5 text-ink-subtle">
               <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-accent" />
-              UPI Link does not process payments, hold money, or verify UPI IDs.
+              UPI QR Generator does not process payments, hold money, or verify UPI IDs.
             </p>
           </div>
 
@@ -131,7 +131,7 @@ export function SiteFooter() {
 
         <div className="mt-12 border-t border-line pt-6">
           <p className="text-xs leading-5 text-ink-subtle">
-            © {year} UPI Link. An independent tool, not affiliated with NPCI or
+            © {year} UPI QR Generator. An independent tool, not affiliated with NPCI or
             any bank or payment application. Payment links remain reproducible
             only while this domain, hosting, and application remain available.
           </p>

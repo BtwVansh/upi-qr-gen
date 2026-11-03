@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
 import {
+  buildPaymentHref,
   buildPaymentPath,
   buildPaymentUrl,
   buildUpiUri,
+  formatAmountInr,
   normalizeUpiId,
+  readAmountParam,
   readUpiRouteParam,
+  validateAmount,
   validateUpiId,
 } from "@/lib/upi";
 import { getAppLaunchUrl, PAYMENT_APPS } from "@/lib/payment-apps";
@@ -81,6 +85,58 @@ test("route params are decoded exactly once", () => {
   assert.equal(readUpiRouteParam("%E0%A4%A").valid, false);
 });
 
+console.log("\nOptional payment amount");
+test("treats a blank amount as an open amount", () => {
+  assert.deepEqual(validateAmount(""), { valid: true, amount: null });
+  assert.deepEqual(validateAmount("   "), { valid: true, amount: null });
+  assert.deepEqual(readAmountParam(undefined), { valid: true, amount: null });
+});
+test("accepts positive amounts with up to two decimals", () => {
+  assert.deepEqual(validateAmount("500"), { valid: true, amount: "500.00" });
+  assert.deepEqual(validateAmount("12.5"), { valid: true, amount: "12.50" });
+  assert.deepEqual(validateAmount("0.99"), { valid: true, amount: "0.99" });
+  assert.deepEqual(validateAmount(" ₹ 1250.75 "), {
+    valid: true,
+    amount: "1250.75",
+  });
+});
+test("rejects zero, negative and malformed amounts", () => {
+  for (const value of ["0", "0.00", "-5", "1.234", "abc", "1e3", "1,000"]) {
+    assert.equal(validateAmount(value).valid, false, value);
+  }
+});
+test("rejects repeated amount query params", () => {
+  assert.equal(readAmountParam(["500", "600"]).valid, false);
+  assert.deepEqual(readAmountParam("500"), { valid: true, amount: "500.00" });
+});
+test("formats the amount as Indian rupees", () => {
+  assert.match(formatAmountInr("500"), /500\.00/);
+});
+test("encodes the amount in the UPI URI when set", () => {
+  assert.equal(
+    buildUpiUri("ABCD@OKAXIS", "500.00"),
+    "upi://pay?pa=ABCD%40OKAXIS&am=500.00&cu=INR",
+  );
+  assert.equal(
+    buildUpiUri("ABCD@OKAXIS"),
+    "upi://pay?pa=ABCD%40OKAXIS&cu=INR",
+  );
+});
+test("carries the amount in the shareable payment URL", () => {
+  assert.equal(
+    buildPaymentHref("ABCD@OKAXIS", "500.00"),
+    "/pay/ABCD%40OKAXIS?amount=500.00",
+  );
+  assert.equal(
+    buildPaymentUrl("ABCD@OKAXIS", "500.00"),
+    "https://upigenerator.netlify.app/pay/ABCD%40OKAXIS?amount=500.00",
+  );
+  assert.equal(
+    buildPaymentHref("ABCD@OKAXIS"),
+    "/pay/ABCD%40OKAXIS",
+  );
+});
+
 console.log("\nUPI URI and payment URL construction");
 test("encodes @ exactly once", () => {
   assert.equal(
@@ -88,7 +144,7 @@ test("encodes @ exactly once", () => {
     "upi://pay?pa=ABCD%40OKAXIS&cu=INR",
   );
 });
-test("does not include an amount", () => {
+test("does not include an amount unless one is set", () => {
   assert.equal(buildUpiUri("name@okaxis").includes("am="), false);
 });
 test("uses INR", () => {
@@ -145,6 +201,14 @@ test("iOS uses each app's own scheme, never Android intents", () => {
   for (const url of [gpay, phonepe, paytm]) {
     assert.equal(url?.includes("intent://"), false);
   }
+});
+test("app launch URLs keep the same amount", () => {
+  const amountUri = buildUpiUri("name@okaxis", "500.00");
+  const android = getAppLaunchUrl(googlePayApp, "android", amountUri, fallback);
+  const ios = getAppLaunchUrl(googlePayApp, "ios", amountUri, fallback);
+
+  assert.match(android ?? "", /am=500\.00/);
+  assert.match(ios ?? "", /am=500\.00/);
 });
 test("desktop and unknown platforms never receive a mobile launch URL", () => {
   for (const platform of ["windows", "macos", "linux", "other", "unknown"] as const) {
