@@ -1,6 +1,5 @@
 "use client";
 
-import Script from "next/script";
 import {
   forwardRef,
   useCallback,
@@ -11,8 +10,11 @@ import {
 } from "react";
 import { AlertCircle, Loader2, RotateCcw, ShieldCheck } from "lucide-react";
 import {
+  getTurnstileApi,
+  isValidTurnstileSiteKey,
+  loadTurnstileScript,
+  resetTurnstileScriptLoader,
   TURNSTILE_ACTION,
-  TURNSTILE_SCRIPT_SRC,
   type TurnstileWidgetOptions,
 } from "@/lib/turnstile";
 
@@ -25,10 +27,21 @@ type TurnstileWidgetProps = {
   onToken: (token: string | null) => void;
 };
 
+const START_ERROR =
+  "Verification could not start. Check your connection and retry.";
+
+const LOAD_ERROR =
+  "Cloudflare Turnstile could not load. Check your connection and retry.";
+
 /**
  * Cloudflare Turnstile in managed mode, rendered explicitly so the widget can
  * be reset after a failed server-side verification. The secret key is never
  * referenced here: this component only knows the public site key.
+ *
+ * The script is loaded from an effect rather than `next/script`, so the
+ * third-party widget never runs during server rendering or while React is
+ * hydrating. Before the effect runs, the server and client render exactly the
+ * same placeholder markup.
  */
 export const TurnstileWidget = forwardRef<
   TurnstileWidgetHandle,
@@ -37,18 +50,29 @@ export const TurnstileWidget = forwardRef<
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
   const onTokenRef = useRef(onToken);
-  const [scriptReady, setScriptReady] = useState(false);
-  const [scriptFailed, setScriptFailed] = useState(false);
+
+  const [mounted, setMounted] = useState(false);
+  const [scriptLoaded, setScriptLoaded] = useState(false);
   const [rendered, setRendered] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // Bumping this restarts the load/render effect for a genuine retry.
+  const [attempt, setAttempt] = useState(0);
+
+  const configured = isValidTurnstileSiteKey(siteKey);
 
   useEffect(() => {
     onTokenRef.current = onToken;
   }, [onToken]);
 
+  // Defer all third-party work until after hydration has completed.
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const reset = useCallback(() => {
-    if (widgetIdRef.current && window.turnstile) {
-      window.turnstile.reset(widgetIdRef.current);
+    const api = getTurnstileApi();
+    if (widgetIdRef.current && api) {
+      api.reset(widgetIdRef.current);
     }
     setNotice(null);
     onTokenRef.current(null);
@@ -56,71 +80,124 @@ export const TurnstileWidget = forwardRef<
 
   useImperativeHandle(ref, () => ({ reset }), [reset]);
 
-  useEffect(() => {
-    if (
-      !siteKey ||
-      !scriptReady ||
-      !containerRef.current ||
-      !window.turnstile ||
-      widgetIdRef.current
-    ) {
-      return;
+  const retry = useCallback(() => {
+    const api = getTurnstileApi();
+
+    if (widgetIdRef.current && api) {
+      try {
+        api.remove(widgetIdRef.current);
+      } catch {
+        // The widget may already be gone; a fresh render still follows.
+      }
+      widgetIdRef.current = null;
     }
 
-    try {
-      const options: TurnstileWidgetOptions = {
-        sitekey: siteKey,
-        action: TURNSTILE_ACTION,
-        theme: "auto",
-        callback: (token) => {
-          setNotice(null);
-          onTokenRef.current(token);
-        },
-        "expired-callback": () => {
-          onTokenRef.current(null);
-          setNotice("Verification expired. Please complete the check again.");
-          if (widgetIdRef.current && window.turnstile) {
-            window.turnstile.reset(widgetIdRef.current);
-          }
-        },
-        "timeout-callback": () => {
-          onTokenRef.current(null);
-          setNotice("Verification timed out. Please try again.");
-          if (widgetIdRef.current && window.turnstile) {
-            window.turnstile.reset(widgetIdRef.current);
-          }
-        },
-        "error-callback": () => {
-          onTokenRef.current(null);
-          setNotice(
-            "Verification could not load. Check your connection and retry.",
-          );
-        },
-      };
+    // Clear any markup Turnstile left behind so render() gets a clean node.
+    containerRef.current?.replaceChildren();
 
-      widgetIdRef.current = window.turnstile.render(
-        containerRef.current,
-        options,
-      );
-      setRendered(true);
-      setNotice(null);
-    } catch {
-      setNotice(
-        "Verification could not start. Check your connection and retry.",
-      );
+    // Only discard the script if it never produced an API. A loaded script is
+    // reused so retrying a failed challenge does not re-download it.
+    if (!api) {
+      resetTurnstileScriptLoader();
     }
-  }, [scriptReady, siteKey]);
+
+    onTokenRef.current(null);
+    setNotice(null);
+    setScriptLoaded(false);
+    setRendered(false);
+    setAttempt((current) => current + 1);
+  }, []);
 
   useEffect(() => {
+    if (!mounted || !configured) return;
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    let cancelled = false;
+    setNotice(null);
+    setScriptLoaded(false);
+    setRendered(false);
+
+    loadTurnstileScript()
+      .then((api) => {
+        if (cancelled) return;
+        // Strict Mode re-runs effects; never render a second widget.
+        if (widgetIdRef.current) return;
+
+        setScriptLoaded(true);
+        container.replaceChildren();
+
+        const showNotice = (message: string) => {
+          if (!cancelled) setNotice(message);
+        };
+
+        const restart = () => {
+          const current = getTurnstileApi();
+          if (widgetIdRef.current && current) {
+            try {
+              current.reset(widgetIdRef.current);
+            } catch {
+              // Ignore: the widget may have been removed already.
+            }
+          }
+        };
+
+        const options: TurnstileWidgetOptions = {
+          sitekey: siteKey,
+          action: TURNSTILE_ACTION,
+          theme: "auto",
+          callback: (token) => {
+            if (cancelled) return;
+            setNotice(null);
+            onTokenRef.current(token);
+          },
+          "expired-callback": () => {
+            if (cancelled) return;
+            onTokenRef.current(null);
+            showNotice("Verification expired. Please complete the check again.");
+            restart();
+          },
+          "timeout-callback": () => {
+            if (cancelled) return;
+            onTokenRef.current(null);
+            showNotice("Verification timed out. Please try again.");
+            restart();
+          },
+          "error-callback": () => {
+            if (cancelled) return;
+            onTokenRef.current(null);
+            showNotice(LOAD_ERROR);
+          },
+        };
+
+        try {
+          widgetIdRef.current = api.render(container, options);
+          setRendered(true);
+        } catch {
+          setNotice(START_ERROR);
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setNotice(LOAD_ERROR);
+      });
+
     return () => {
-      if (widgetIdRef.current && window.turnstile) {
-        window.turnstile.remove(widgetIdRef.current);
+      cancelled = true;
+      const api = getTurnstileApi();
+      if (widgetIdRef.current && api) {
+        try {
+          api.remove(widgetIdRef.current);
+        } catch {
+          // Ignore teardown races; the next effect renders a fresh widget.
+        }
       }
       widgetIdRef.current = null;
     };
-  }, []);
+  }, [attempt, configured, mounted, siteKey]);
 
-  if (!siteKey) {
+  if (!configured) {
     return (
       <div className="rounded-2xl border border-danger/30 bg-danger-soft p-4">
         <p className="flex items-start gap-2 text-xs font-medium leading-5 text-danger">
@@ -153,24 +230,10 @@ export const TurnstileWidget = forwardRef<
         created.
       </p>
 
-      {!scriptReady && !scriptFailed && (
+      {!rendered && !notice && (
         <p className="mt-3 flex items-center gap-2 text-xs text-ink-subtle">
           <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-          Loading verification…
-        </p>
-      )}
-
-      {scriptFailed && (
-        <p
-          role="alert"
-          className="mt-3 flex items-start gap-1.5 text-xs font-medium leading-5 text-danger"
-        >
-          <AlertCircle
-            className="mt-0.5 size-3.5 shrink-0"
-            aria-hidden="true"
-          />
-          Cloudflare Turnstile could not load. Check your connection, then
-          reload the page.
+          {scriptLoaded ? "Preparing verification…" : "Loading verification…"}
         </p>
       )}
 
@@ -180,13 +243,6 @@ export const TurnstileWidget = forwardRef<
         role="group"
         aria-label="CAPTCHA verification"
       />
-
-      {!rendered && scriptReady && !scriptFailed && (
-        <p className="mt-2 flex items-center gap-2 text-xs text-ink-subtle">
-          <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-          Preparing verification…
-        </p>
-      )}
 
       {notice && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -202,7 +258,7 @@ export const TurnstileWidget = forwardRef<
           </p>
           <button
             type="button"
-            onClick={reset}
+            onClick={retry}
             className="inline-flex items-center gap-1 text-xs font-semibold text-accent underline decoration-accent/30 underline-offset-4 transition hover:decoration-accent"
           >
             <RotateCcw className="size-3" aria-hidden="true" />
@@ -210,13 +266,6 @@ export const TurnstileWidget = forwardRef<
           </button>
         </div>
       )}
-
-      <Script
-        src={TURNSTILE_SCRIPT_SRC}
-        strategy="afterInteractive"
-        onReady={() => setScriptReady(true)}
-        onError={() => setScriptFailed(true)}
-      />
     </div>
   );
 });

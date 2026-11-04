@@ -16,7 +16,10 @@ import {
   TurnstileWidget,
   type TurnstileWidgetHandle,
 } from "@/components/turnstile";
-import { TURNSTILE_SITE_KEY } from "@/lib/turnstile";
+import {
+  isValidTurnstileSiteKey,
+  TURNSTILE_SITE_KEY,
+} from "@/lib/turnstile";
 import { validateAmount, validateUpiId } from "@/lib/upi";
 import { cn } from "@/lib/cn";
 
@@ -79,7 +82,7 @@ export function HeroForm() {
 
     setConsentError(null);
 
-    if (!TURNSTILE_SITE_KEY) {
+    if (!isValidTurnstileSiteKey(TURNSTILE_SITE_KEY)) {
       setCaptchaError(
         "CAPTCHA is not configured. Add NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY to the environment before generating payment links.",
       );

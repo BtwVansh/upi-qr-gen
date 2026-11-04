@@ -145,9 +145,15 @@ Never prefix the secret key with `NEXT_PUBLIC_`. Only the server route reads it.
 In **Site configuration → Environment variables**, add:
 
 ```text
-NEXT_PUBLIC_TURNSTILE_SITE_KEY=<your site key>
-TURNSTILE_SECRET_KEY=<your secret key>
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAAA...
+TURNSTILE_SECRET_KEY=0x4AAAAAAA...
 ```
+
+Paste the keys exactly as Cloudflare shows them. Do **not** wrap them in angle
+brackets (`<...>`), quotes, or backticks: the value is sent to Turnstile
+verbatim, and a bracketed site key is rejected with `Invalid input for parameter
+"sitekey"`. The client strips accidental brackets and quotes before rendering,
+but the clean value is still what should be stored.
 
 Apply both to the deploy contexts you use (production, deploy previews, branch
 deploys). `NEXT_PUBLIC_*` values are inlined at build time, so trigger a new
@@ -177,6 +183,12 @@ not a frontend-only bypass.
 - Turnstile tokens are single-use. A reused token produces
   `timeout-or-duplicate`, which is shown as an expired/used error.
 - The widget resets after a failed verification so the user can retry.
+- The Turnstile script is loaded once from a client-only effect, after React has
+  hydrated. It is not server-rendered or preloaded, so the third-party widget
+  cannot modify the DOM during hydration.
+- If the script fails to download, times out after 15 seconds, or reports a
+  widget error, the form shows the reason and a **Retry** button. Retry removes
+  any leftover widget and reloads the script only if it never loaded.
 - If the secret key is missing, the API returns a configuration error and no
   payment link is created.
 
@@ -521,7 +533,9 @@ development-only tooling and are not shipped to production.
    secret.
 7. **CAPTCHA requires Cloudflare.** If Turnstile is misconfigured or unavailable,
    the generator cannot create new payment links. Existing `/pay/...` links
-   remain usable because they are reconstructed directly from the URL.
+   remain usable because they are reconstructed directly from the URL. Check
+   that the site key has no surrounding `< >` characters and that both keys
+   belong to the same Turnstile widget.
 
 ---
 
