@@ -276,13 +276,13 @@ export function PaymentView({
           UPI ID is active or belongs to the intended recipient.
         </p>
 
-        <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)]">
+        <div className="mt-8 grid grid-cols-1 items-start gap-6 md:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)]">
           {/* QR card */}
           <section
             aria-labelledby="qr-heading"
-            className="card overflow-hidden p-5 sm:p-6 lg:sticky lg:top-24"
+            className="card min-w-0 overflow-hidden p-5 sm:p-6 lg:sticky lg:top-24"
           >
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h2
                 id="qr-heading"
                 className="flex items-center gap-2 text-sm font-semibold text-ink"
@@ -297,11 +297,11 @@ export function PaymentView({
 
             <div className="mt-5 rounded-2xl border border-line bg-canvas p-4">
               <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-ink-subtle">
                     Payment amount
                   </p>
-                  <p className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+                  <p className="mt-1 break-words text-[clamp(1rem,4.8vw,1.5rem)] font-semibold tracking-tight text-ink">
                     {amountLabel ?? "Open amount"}
                   </p>
                   <p className="mt-1 text-xs leading-5 text-ink-subtle">
@@ -452,7 +452,7 @@ export function PaymentView({
           </section>
 
           {/* Actions column */}
-          <div className="space-y-5">
+          <div className="min-w-0 space-y-5">
             {/* App launchers */}
             <section
               aria-labelledby="apps-heading"

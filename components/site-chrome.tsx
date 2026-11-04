@@ -33,7 +33,10 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Link href="/#generator" className="btn-primary btn-sm">
+          <Link
+            href="/#generator"
+            className="btn-primary btn-sm max-[374px]:hidden"
+          >
             Create a link
           </Link>
         </div>
